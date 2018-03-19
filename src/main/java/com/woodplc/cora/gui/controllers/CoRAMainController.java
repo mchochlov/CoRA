@@ -2,7 +2,9 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
+import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.DataModel;
 import com.woodplc.cora.gui.model.DataModel.Subprogram;
 
@@ -22,7 +24,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
-public class CoRAMainController {
+class CoRAMainController {
 	
 	private DataModel model;
 
@@ -129,5 +131,19 @@ public class CoRAMainController {
 		scene.getStylesheets().add(getClass().getResource("/com/woodplc/cora/gui/css/application.css").toExternalForm());
 		stage.setScene(scene);
 		stage.show();
+	}
+	
+	static class ParseTask extends Task<SDGraph> {
+
+		ParseTask(Path path){
+			
+		}
+		
+		@Override
+		protected SDGraph call() throws Exception {
+			// TODO Auto-generated method stub
+			return null;
+		}
+		
 	}
 }
