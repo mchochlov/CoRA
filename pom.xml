@@ -52,6 +52,21 @@
 					</dependency>
 				</dependencies>
 			</plugin>
+			<plugin>
+        		<groupId>org.antlr</groupId>
+        		<artifactId>antlr4-maven-plugin</artifactId>
+        		<version>4.7</version>                
+        		<executions>
+          			<execution>
+            			<goals>
+              				<goal>antlr4</goal>
+            			</goals>            
+            		</execution>
+        		</executions>
+        		<configuration>
+        			<sourceDirectory>src/main/resources</sourceDirectory>
+        		</configuration>
+        	</plugin>
 		</plugins>
 	</build>
 
@@ -74,5 +89,10 @@
 			<version>1.1.0</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+      		<groupId>org.antlr</groupId>
+      		<artifactId>antlr4-runtime</artifactId>
+      		<version>4.7</version>
+    	</dependency>
 	</dependencies>
 </project>

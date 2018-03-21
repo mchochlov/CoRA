@@ -24,7 +24,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
-class CoRAMainController {
+public class CoRAMainController {
 	
 	private DataModel model;
 

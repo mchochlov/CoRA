@@ -1,5 +1,6 @@
 package com.woodplc.cora.data;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -10,7 +11,7 @@ class StubGraph implements SDGraph {
 
 	@Override
 	public Set<SubProgram> getSubprograms() {
-		return subprograms;
+		return Collections.unmodifiableSet(subprograms);
 	}
 
 	@Override
