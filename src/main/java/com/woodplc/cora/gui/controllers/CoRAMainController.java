@@ -215,5 +215,34 @@ public class CoRAMainController {
 		private Module() {}
 	}
 	
-	
+	static class ParseTask extends Task<SDGraph> {
+		
+		private final Path path;
+
+		ParseTask(Path path){
+			this.path = Objects.requireNonNull(path);
+		}
+		
+		@Override
+		protected SDGraph call() throws Exception {
+			SDGraph graph = Graphs.stubGraph();
+			Parser parser = Parsers.fortranParser();
+			try (DirectoryStream<Path> stream = Files.newDirectoryStream(
+					path, Parsers.fortranFileExtensions()
+					)
+				) 
+			{
+				long totalFiles = 0, parsedFiles = 0;
+				Set<Path> paths = StreamSupport.stream(stream.spliterator(), false).collect(toSet());
+				totalFiles = paths.size();
+				
+				for (Path entry: paths) {
+					graph.add(parser.parse(entry));
+					updateProgress(++parsedFiles, totalFiles);
+				}
+				return graph;
+		    }
+		}
+		
+	}
 }
