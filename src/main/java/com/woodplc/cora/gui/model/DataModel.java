@@ -1,5 +1,9 @@
 package com.woodplc.cora.gui.model;
 
+import java.util.Objects;
+
+import com.woodplc.cora.data.SDGraph;
+
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -9,6 +13,12 @@ public class DataModel {
 
 	private static DataModel instance = null;
 	
+	private SDGraph systemAGraph;
+	
+	public void setSystemAGraph(SDGraph systemAGraph) {
+		this.systemAGraph = Objects.requireNonNull(systemAGraph);
+	}
+
 	private ObservableList<String> flex3Subprograms = FXCollections.observableArrayList();
 	private ObservableList<String> flex3Callers = FXCollections.observableArrayList("cable_solution", "distributed_load");
 	private ObservableList<String> flex3Callees = FXCollections.observableArrayList("cable_solution", "distributed_load");

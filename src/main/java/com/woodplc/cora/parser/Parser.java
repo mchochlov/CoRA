@@ -4,7 +4,7 @@ import java.nio.file.Path;
 
 import com.woodplc.cora.data.FortranFileModel;
 
-interface Parser {
+public interface Parser {
 	
 	FortranFileModel parse(Path path);
 

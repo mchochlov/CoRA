@@ -20,19 +20,19 @@
          <children>
             <HBox spacing="10.0">
                <children>
-                  <Label prefWidth="60.0" text="System A:">
+                  <Label prefWidth="60.0" text="%system_a_lbl">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <Label minWidth="-Infinity" prefWidth="55.0">
+                  <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="55.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
                   <TextField fx:id="flex3DirFld" />
-                  <Button fx:id="flex3BrowseBtn" mnemonicParsing="false" onAction="#openFlex3BrowseDlg" text="Browse" />
-                  <Button fx:id="flex3ParseBtn" mnemonicParsing="false" onAction="#parseFlex3" text="Parse" />
+                  <Button fx:id="flex3BrowseBtn" mnemonicParsing="false" onAction="#openFlex3BrowseDlg" text="%browse_btn" />
+                  <Button fx:id="flex3ParseBtn" mnemonicParsing="false" onAction="#parseFlex3" text="%parse_btn" />
                   <ProgressBar fx:id="flex3ProgressBar" prefHeight="18.0" prefWidth="150.0" progress="0.0">
                      <HBox.margin>
                         <Insets top="5.0" />
@@ -42,20 +42,20 @@
             </HBox>
             <HBox spacing="10.0">
                <children>
-                  <Label prefWidth="60.0" text="System B:">
+                  <Label prefWidth="60.0" text="%system_b_lbl">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <Label minWidth="-Infinity" prefWidth="55.0">
+                  <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="55.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <TextField />
-                  <Button mnemonicParsing="false" text="Browse" />
-                  <Button mnemonicParsing="false" text="Parse" />
-                  <ProgressBar prefWidth="150.0" progress="0.0">
+                  <TextField fx:id="systemBDirFld" />
+                  <Button fx:id="systemBBrowseBtn" mnemonicParsing="false" onAction="#openSystemBBrowseDlg" text="%browse_btn" />
+                  <Button fx:id="systemBParseBtn" mnemonicParsing="false" onAction="#parseSystemB" text="%parse_btn" />
+                  <ProgressBar fx:id="systemBProgressBar" prefWidth="150.0" progress="0.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
@@ -64,20 +64,20 @@
             </HBox>
             <HBox spacing="10.0">
                <children>
-                  <Label prefWidth="60.0" text="System C:">
+                  <Label prefWidth="60.0" text="%system_c_lbl">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <Label prefWidth="55.0">
+                  <Label fx:id="systemCLbl" prefWidth="55.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <TextField />
-                  <Button mnemonicParsing="false" text="Browse" />
-                  <Button mnemonicParsing="false" text="Parse" />
-                  <ProgressBar prefWidth="150.0" progress="0.0">
+                  <TextField fx:id="systemCDirFld" />
+                  <Button fx:id="systemCBrowseBtn" mnemonicParsing="false" onAction="#openSystemCBrowseDlg" text="%browse_btn" />
+                  <Button fx:id="systemCParseBtn" mnemonicParsing="false" onAction="#parseSystemC" text="%parse_btn" />
+                  <ProgressBar fx:id="systemCProgressBar" prefWidth="150.0" progress="0.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>

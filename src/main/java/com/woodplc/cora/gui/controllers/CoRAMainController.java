@@ -1,12 +1,23 @@
 package com.woodplc.cora.gui.controllers;
 
+import static java.util.stream.Collectors.toSet;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.StreamSupport;
 
+import com.woodplc.cora.app.Main;
+import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.DataModel;
 import com.woodplc.cora.gui.model.DataModel.Subprogram;
+import com.woodplc.cora.parser.Parser;
+import com.woodplc.cora.parser.Parsers;
 
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -14,6 +25,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
@@ -26,8 +38,48 @@ import javafx.stage.Stage;
 
 public class CoRAMainController {
 	
-	private DataModel model;
+	private final DataModel model = DataModel.instance();
+	
+	private final DirectoryChooser dirChooser = new DirectoryChooser();
+	
+	private final Module moduleA = new Module();
+	private final Module moduleB = new Module();
+	private final Module moduleC = new Module();
+	
+	@FXML
+	private Label systemALbl;
+	@FXML
+	private TextField flex3DirFld;
+	@FXML
+	private Button flex3BrowseBtn;
+	@FXML
+	private Button flex3ParseBtn;
+	@FXML
+	private ProgressBar flex3ProgressBar;
+	
+	@FXML
+    private Label systemBLbl;
+    @FXML
+    private TextField systemBDirFld;
+    @FXML
+    private Button systemBBrowseBtn;
+    @FXML
+    private Button systemBParseBtn;
+    @FXML
+    private ProgressBar systemBProgressBar;
 
+    @FXML
+    private Label systemCLbl;
+    @FXML
+    private TextField systemCDirFld;
+    @FXML
+    private Button systemCBrowseBtn;
+    @FXML
+    private Button systemCParseBtn;
+    @FXML
+    private ProgressBar systemCProgressBar;
+	
+	
 	@FXML
 	private ListView<String> flex3List;
 	
@@ -40,42 +92,66 @@ public class CoRAMainController {
 	@FXML
 	private TableView<Subprogram> flex3Tbl;
 	
-	@FXML
-	private TextField flex3DirFld;
 	
-	@FXML
-	private Button flex3BrowseBtn;
-	
-	@FXML
-	private ProgressBar flex3ProgressBar;
 
 	@FXML
 	void openFlex3BrowseDlg(ActionEvent event) {
-		DirectoryChooser fileChooser = new DirectoryChooser();
-		fileChooser.setTitle("Select Flex3 directory");
-		File selectedFile = fileChooser.showDialog(flex3BrowseBtn.getScene().getWindow());
-		flex3DirFld.setText(selectedFile.getAbsolutePath());
+		open(moduleA, Main.getResources().getString("select_system_a"), flex3DirFld, systemALbl);
 	}
+	
+	@FXML
+    void openSystemBBrowseDlg(ActionEvent event) {
+		open(moduleB, Main.getResources().getString("select_system_b"), systemBDirFld, systemBLbl);
+    }
 
+    @FXML
+    void openSystemCBrowseDlg(ActionEvent event) {
+		open(moduleC, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl);
+    }
+
+
+	private void open(Module module, String title, TextField txtField, Label label) {
+		dirChooser.setTitle(title);
+		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
+		if (selectedDir != null) {
+			txtField.setText(selectedDir.getAbsolutePath());
+			module.path = selectedDir.toPath();
+			label.setText(module.path.getFileName().toString());
+		}
+	}
+	
 	@FXML
 	void parseFlex3(ActionEvent event) {
-		Task<Void> task = new Task<Void>() {
-			@Override
-			public Void call() throws Exception {
-				final int max = 10;
-				for (int i = 1; i <= max; i++) {
-					if (isCancelled()) {
-						break;
-					}
-					updateProgress(i, max);
-					Thread.sleep(1000);
-				}
-				return null;
-			}
-		};
+		parse(moduleA, flex3ParseBtn, flex3ProgressBar);
+	}
+	
+	@FXML
+    void parseSystemB(ActionEvent event) {
+		parse(moduleB, systemBParseBtn, systemBProgressBar);
+    }
 
-		flex3ProgressBar.progressProperty().bind(task.progressProperty());
-		new Thread(task).start();
+    @FXML
+    void parseSystemC(ActionEvent event) {
+		parse(moduleC, systemCParseBtn, systemCProgressBar);
+    }
+	
+	private void parse(Module module, Button parseBtn, ProgressBar progressBar) {
+		if (module.path != null) {
+			parseBtn.setDisable(true);
+			ParseTask pTask = new ParseTask(module.path);
+			pTask.setOnSucceeded((event) -> {
+				module.graph = pTask.getValue();
+				parseBtn.setDisable(false);
+			});
+			
+			pTask.setOnFailed((event) -> {
+				module.graph = Graphs.stubGraph();
+				parseBtn.setDisable(false);
+			});
+			
+			progressBar.progressProperty().bind(pTask.progressProperty());
+			new Thread(pTask).start();
+		}
 	}
 
 	@FXML
@@ -87,7 +163,6 @@ public class CoRAMainController {
 
 	@FXML
 	void initialize() {
-		this.model = DataModel.instance();
 		flex3List.setItems(model.getFlex3Subprograms());
 		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("id"));
 		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("name"));
@@ -133,17 +208,12 @@ public class CoRAMainController {
 		stage.show();
 	}
 	
-	static class ParseTask extends Task<SDGraph> {
-
-		ParseTask(Path path){
-			
-		}
+	private static class Module {
+		private Path path;
+		private SDGraph graph;
 		
-		@Override
-		protected SDGraph call() throws Exception {
-			// TODO Auto-generated method stub
-			return null;
-		}
-		
+		private Module() {}
 	}
+	
+	
 }
