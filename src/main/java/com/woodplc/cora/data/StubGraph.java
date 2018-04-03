@@ -20,4 +20,34 @@ class StubGraph implements SDGraph {
 		subprograms.addAll(model.getSubprograms());
 	}
 
+	@Override
+	public boolean containsSubprogram(String subName) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Set<String> getSubprogramCallees(String subName) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Set<String> getSubprogramCallers(String subName) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean containsVariable(String varName) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Set<String> getVariableCallees(String varName) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

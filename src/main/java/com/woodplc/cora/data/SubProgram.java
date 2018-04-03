@@ -7,9 +7,9 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-public class SubProgram {
+import com.woodplc.cora.utils.Utils;
 
-	private static final String COMMA_SEPARATOR = ",";
+public class SubProgram {
 
 	private final String subname;
 	private final int startLine;
@@ -28,7 +28,7 @@ public class SubProgram {
 	public static SubProgram fromString(String str) {
 		Objects.requireNonNull(str);
 		
-		String[] entry = str.split(COMMA_SEPARATOR);
+		String[] entry = str.split(Utils.RegEx.COMMA.regex());
 		if (entry.length != 4) {
 			throw new IllegalArgumentException();
 		}
