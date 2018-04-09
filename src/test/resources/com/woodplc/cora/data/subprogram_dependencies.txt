@@ -1,6 +1,6 @@
 LIN_FLEX_JOINT_PROP,,
 XLOC,,MXOUT
-DllMain,InitialiseIds,,
+DllMain,InitialiseIds,
 case_insensitive_compare,,
 MXOUT,XLOC,
 ExampleSet,ExampleSet,ObjectTest ExampleSet

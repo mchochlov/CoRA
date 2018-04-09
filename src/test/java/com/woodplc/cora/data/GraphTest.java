@@ -11,6 +11,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,22 +42,21 @@ class GraphTest {
 		assertNotNull(graph);
 		
 		for (String entry : fileEntries) {
-			String[] entryMembers = entry.split(RegEx.COMMA.regex(), NUM_SUBPROGRAM_MEMBERS);
+			String[] entryMembers = entry.toLowerCase().split(RegEx.COMMA.regex(), NUM_SUBPROGRAM_MEMBERS);
 			assertEquals(NUM_SUBPROGRAM_MEMBERS, entryMembers.length);
 			String subName = entryMembers[0];
-			assertTrue(subName.length() > 0);
-			Set<String> correctCallees = new HashSet<>(Arrays.asList(entryMembers[1].split(RegEx.WHITESPACE.regex())));
-			Set<String> correctCallers = new HashSet<>(Arrays.asList(entryMembers[2].split(RegEx.WHITESPACE.regex())));
+			assertTrue(!subName.isEmpty());
+			Set<String> correctCallees = entryMembers[1].isEmpty() ? Collections.emptySet() 
+					: new HashSet<>(Arrays.asList(entryMembers[1].split(RegEx.WHITESPACE.regex())));
+			Set<String> correctCallers = entryMembers[2].isEmpty() ? Collections.emptySet()
+					: new HashSet<>(Arrays.asList(entryMembers[2].split(RegEx.WHITESPACE.regex())));
 			
 			assertTrue(graph.containsSubprogram(subName));
 			Set<String> testCallees = graph.getSubprogramCallees(subName);
 			Set<String> testCallers = graph.getSubprogramCallers(subName);
 			
-			assertEquals(correctCallees.size(), testCallees.size());
-			assertTrue(correctCallees.containsAll(testCallees));
-			
-			assertEquals(correctCallers.size(), testCallers.size());
-			assertTrue(correctCallers.containsAll(testCallers));
+			assertTrue(correctCallees.equals(testCallees));
+			assertTrue(correctCallers.equals(testCallers));
 		}
 	}
 
@@ -71,19 +71,19 @@ class GraphTest {
 		assertNotNull(graph);
 		
 		for (String entry : fileEntries) {
-			String[] entryMembers = entry.split(RegEx.COMMA.regex(), NUM_VARIABLE_MEMBERS);
+			String[] entryMembers = entry.toLowerCase().split(RegEx.COMMA.regex(), NUM_VARIABLE_MEMBERS);
 			assertEquals(NUM_VARIABLE_MEMBERS, entryMembers.length);
 			String varName = entryMembers[0];
 			assertTrue(varName.length() > 0);
-			Set<String> correctCallees = new HashSet<>(Arrays.asList(entryMembers[1].split(RegEx.WHITESPACE.regex())));
+			Set<String> correctCallees = entryMembers[1].isEmpty() ? Collections.emptySet()
+					: new HashSet<>(Arrays.asList(entryMembers[1].split(RegEx.WHITESPACE.regex())));
 			
-			if (correctCallees.size() < 2) {
+			if (correctCallees.size() < 1) {
 				assertFalse(graph.containsVariable(varName));
 			} else {
 				assertTrue(graph.containsVariable(varName));
 				Set<String> testCallees = graph.getVariableCallees(varName);
-				assertEquals(correctCallees.size(), testCallees.size());
-				assertTrue(correctCallees.containsAll(testCallees));
+				assertTrue(correctCallees.equals(testCallees));
 			}	
 		}
 	}

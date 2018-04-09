@@ -32,7 +32,7 @@ public final class TestUtils {
 	public static SDGraph parseFiles(Parser parser, Path path) throws IOException {
 		Objects.requireNonNull(parser);
 		Objects.requireNonNull(path);
-		SDGraph graph = Graphs.stubGraph();
+		SDGraph graph = Graphs.getSDGraphInstance();
 		Objects.requireNonNull(graph);
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(
 				path, Parsers.fortranFileExtensions()
@@ -40,7 +40,7 @@ public final class TestUtils {
 			) 
 		{
 			for (Path entry: stream) {
-				graph.add(parser.parse(entry));
+				graph.merge(parser.parse(entry));
 			}
 			return graph;
 	    }

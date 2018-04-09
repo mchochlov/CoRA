@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
-import com.woodplc.cora.utils.TestUtils;
+import com.woodplc.cora.utils.TestUtils.SoftwareSystem;
 
 class ParserTest {
 
@@ -30,12 +30,12 @@ class ParserTest {
 	void testParserForCorrectness() throws IOException, URISyntaxException {
 		Set<SubProgram> correctSubsetOfSubPrograms = Files.readAllLines(Paths.get(getClass().getResource(SUBPROGRAM_METADATA_FILE).toURI()))
 				.stream()
-				.map(x -> SubProgram.fromString(x))
+				.map(x -> SubProgram.fromString(x.toLowerCase()))
 				.collect(Collectors.toSet());
 		assertEquals(NUM_CORRECT_SUBPROGRAMS, correctSubsetOfSubPrograms.size());
 		
 		Parser parser = Parsers.fortranParser();
-		SDGraph graph = parseFiles(parser, TestUtils.SoftwareSystem.TEST.path());
+		SDGraph graph = parseFiles(parser, SoftwareSystem.TEST.path());
 		assertNotNull(graph);
 		Set<SubProgram> testSetOfSubprograms = graph.getSubprograms();
 		
@@ -46,17 +46,17 @@ class ParserTest {
 	void testParserProductionCodeResponseTime() {
 		Parser flex3Parser = Parsers.fortranParser();
 		assertTimeout(ofSeconds(ACCEPTABLE_RESPONSE_TIME_SEC), () -> {
-			parseFiles(flex3Parser, TestUtils.SoftwareSystem.FLEX3.path());
+			parseFiles(flex3Parser, SoftwareSystem.FLEX3.path());
 		});
 		
 		Parser dprflex3Parser = Parsers.fortranParser();
 		assertTimeout(ofSeconds(ACCEPTABLE_RESPONSE_TIME_SEC), () -> {
-			parseFiles(dprflex3Parser, TestUtils.SoftwareSystem.DPRFLEX3.path());
+			parseFiles(dprflex3Parser, SoftwareSystem.DPRFLEX3.path());
 		});
 		
 		Parser mamParser = Parsers.fortranParser();
 		assertTimeout(ofSeconds(ACCEPTABLE_RESPONSE_TIME_SEC), () -> {
-			parseFiles(mamParser, TestUtils.SoftwareSystem.MAM.path());
+			parseFiles(mamParser, SoftwareSystem.MAM.path());
 		});
 	}
 	
