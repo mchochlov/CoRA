@@ -21,7 +21,8 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
-import com.woodplc.cora.data.FortranFileModel;
+import com.woodplc.cora.data.Graphs;
+import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.grammar.FuzzyFortranBaseListener;
 import com.woodplc.cora.grammar.FuzzyFortranLexer;
@@ -34,7 +35,7 @@ import com.woodplc.cora.grammar.FuzzyFortranParser.SubprogramContext;
 class ANTLRFortranParser implements Parser {
 
 	@Override
-	public FortranFileModel parse(Path path) {
+	public SDGraph parse(Path path) {
 		Objects.requireNonNull(path);
 		
 		CharStream stream = null;
@@ -64,32 +65,29 @@ class ANTLRFortranParser implements Parser {
 		}
 		ParseTreeWalker ptw = new ParseTreeWalker();
 		ptw.walk(fl, tree);
-		return fl.getFortranFileModel();
+		return fl.getSDGraph();
 	}
 	
 	private static class FuzzyListener extends FuzzyFortranBaseListener {
 
 		private final Path fname;
-		private final FortranFileModel model = new FortranFileModel();
-		private Set<String> localCallees = new HashSet<>();
+		private final SDGraph graph = Graphs.getSDGraphInstance();
+		private final Set<String> localCallees = new HashSet<>();
 
 		private FuzzyListener(Path fname){
 			this.fname = fname;
 		}
 		
-		public FortranFileModel getFortranFileModel() {
-			return model;
-		}
-
+		private SDGraph getSDGraph() {return graph;}
+		
 		@Override
 		public void exitSubprogram(SubprogramContext ctx) {
-			SubProgram subprogram = SubProgram.fromValues(ctx.ID(0).getText(), 
+			SubProgram subprogram = new SubProgram(ctx.ID(0).getText(), 
 					ctx.getStart().getLine(), 
 					ctx.getStop().getLine(), 
-					fname, 
-					localCallees);
+					fname);
+			graph.addSubprogramAndCallees(subprogram, new HashSet<>(localCallees));
 			localCallees.clear();
-			model.addSubprogram(subprogram);
 		}
 
 		@Override
@@ -104,7 +102,7 @@ class ANTLRFortranParser implements Parser {
 						.stream()
 						.map(x -> x.getText())
 						.collect(toSet());
-				model.addControlVariables(identifiers, Collections.singleton(ctx.callStatement().ID().getText()));
+				graph.addVariablesAndCallees(identifiers, Collections.singleton(ctx.callStatement().ID().getText()));
 			}
 		}
 
@@ -122,7 +120,7 @@ class ANTLRFortranParser implements Parser {
 						.stream()
 						.map(x -> x.getText())
 						.collect(toSet());
-				model.addControlVariables(identifiers, callees);
+				graph.addVariablesAndCallees(identifiers, callees);
 			}
 		}
 	

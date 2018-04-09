@@ -145,7 +145,7 @@ public class CoRAMainController {
 			});
 			
 			pTask.setOnFailed((event) -> {
-				module.graph = Graphs.stubGraph();
+				module.graph = Graphs.getSDGraphInstance();
 				parseBtn.setDisable(false);
 			});
 			
@@ -225,7 +225,7 @@ public class CoRAMainController {
 		
 		@Override
 		protected SDGraph call() throws Exception {
-			SDGraph graph = Graphs.stubGraph();
+			SDGraph graph = Graphs.getSDGraphInstance();
 			Parser parser = Parsers.fortranParser();
 			try (DirectoryStream<Path> stream = Files.newDirectoryStream(
 					path, Parsers.fortranFileExtensions()
@@ -237,7 +237,7 @@ public class CoRAMainController {
 				totalFiles = paths.size();
 				
 				for (Path entry: paths) {
-					graph.add(parser.parse(entry));
+					graph.merge(parser.parse(entry));
 					updateProgress(++parsedFiles, totalFiles);
 				}
 				return graph;
