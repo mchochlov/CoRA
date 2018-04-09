@@ -4,18 +4,21 @@ import java.util.Set;
 
 public interface SDGraph {
 
-	Set<SubProgram> getSubprograms();
+	void addVariablesAndCallees(Set<String> variables, Set<String> callees);
 
-	void add(FortranFileModel model);
+	void addSubprogramAndCallees(SubProgram subprogram, Set<String> callees);
 
 	boolean containsSubprogram(String subName);
+
+	boolean containsVariable(String varName);
+
+	Set<SubProgram> getSubprograms();
 
 	Set<String> getSubprogramCallees(String subName);
 
 	Set<String> getSubprogramCallers(String subName);
 
-	boolean containsVariable(String varName);
-
 	Set<String> getVariableCallees(String varName);
 
+	void merge(SDGraph graph);
 }

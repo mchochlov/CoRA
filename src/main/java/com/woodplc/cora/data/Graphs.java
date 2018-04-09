@@ -4,8 +4,8 @@ public final class Graphs {
 	
 	private Graphs() {}
 
-	public static SDGraph stubGraph() {
-		return new StubGraph();
+	public static SDGraph getSDGraphInstance() {
+		return new GuavaBasedSDGraph();
 	}
 	
 }
