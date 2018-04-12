@@ -14,8 +14,10 @@ body : ( ifStatement | ifOneLine | callStatement | . )*?
 ;
 
 callStatement :
-	'call' ID ('(')?
+	'call' (callPrefix)? ID ('(')?
 ;
+
+callPrefix : ID '%';
 
 ifOneLine : 'if' '(' block ')' (callStatement | ~'then' )
 	//{System.out.println("ifonelineblock: " + $start + $stop);}

@@ -94,5 +94,11 @@
       		<artifactId>antlr4-runtime</artifactId>
       		<version>4.7</version>
     	</dependency>
+    	<dependency>
+  			<groupId>com.google.guava</groupId>
+  			<artifactId>guava</artifactId>
+  			<version>24.1-jre</version>
+		</dependency>
+    	
 	</dependencies>
 </project>
