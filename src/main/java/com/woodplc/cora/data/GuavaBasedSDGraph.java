@@ -70,6 +70,16 @@ class GuavaBasedSDGraph implements SDGraph {
 	}
 
 	@Override
+	public int getFanIn(String subName) {
+		return subprogramCallGraph.inDegree(subName);
+	}
+
+	@Override
+	public int getFanOut(String subName) {
+		return subprogramCallGraph.outDegree(subName);
+	}
+
+	@Override
 	public Set<String> getSubprogramCallees(String subName) {
 		return new HashSet<>(subprogramCallGraph.successors(subName));
 	}

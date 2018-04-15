@@ -13,7 +13,11 @@ public interface SDGraph {
 	boolean containsVariable(String varName);
 
 	Set<SubProgram> getSubprograms();
-
+	
+	int getFanIn(String subName);
+	
+	int getFanOut(String subName);
+	
 	Set<String> getSubprogramCallees(String subName);
 
 	Set<String> getSubprogramCallers(String subName);
