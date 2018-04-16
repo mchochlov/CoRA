@@ -10,17 +10,30 @@ import javafx.stage.Stage;
 
 
 public class Main extends Application {
+
+	public enum Resource {
+		CSS("/com/woodplc/cora/gui/css/application.css"),
+		TEXT("com.woodplc.cora.gui.fxml.CoraResources"),
+		MAIN_FXML("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"),
+		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml");
+		
+		private final String path;
+		
+		Resource(String path){this.path = path;}
+		
+		public String path() {return this.path;}
+	}
+
+	private final static ResourceBundle resources = ResourceBundle.getBundle(Resource.TEXT.path);
 	
-	private final static String CORA_RESOURCES = "com.woodplc.cora.gui.fxml.CoraResources";
-	private final static ResourceBundle resources = ResourceBundle.getBundle(CORA_RESOURCES);
 	
 	@Override
 	public void start(Stage primaryStage) {
 		try {
 			primaryStage.setTitle(resources.getString("cora_main_title"));
-			AnchorPane root = (AnchorPane)FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"), resources);
+			AnchorPane root = (AnchorPane)FXMLLoader.load(getClass().getResource(Resource.MAIN_FXML.path), resources);
 			Scene scene = new Scene(root,600,600);
-			scene.getStylesheets().add(getClass().getResource("/com/woodplc/cora/gui/css/application.css").toExternalForm());
+			scene.getStylesheets().add(getClass().getResource(Resource.CSS.path).toExternalForm());
 			primaryStage.setScene(scene);
 			primaryStage.show();
 		} catch(Exception e) {

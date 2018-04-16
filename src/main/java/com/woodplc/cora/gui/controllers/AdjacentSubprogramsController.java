@@ -1,7 +1,7 @@
 package com.woodplc.cora.gui.controllers;
 
 import java.util.Objects;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
@@ -21,8 +21,8 @@ class AdjacentSubprogramsController {
 	private final String subname;
 	private final SDGraph graph;
 	private final ObservableList<String> systemASubprograms;
-	private final ObservableList<EntityView> callers = FXCollections.observableArrayList();
-	private final ObservableList<EntityView> callees = FXCollections.observableArrayList();
+	private final ObservableList<EntityView> callers;
+	private final ObservableList<EntityView> callees;// = FXCollections.observableArrayList();
 	
 	@FXML
     private Label callersLbl;
@@ -48,6 +48,22 @@ class AdjacentSubprogramsController {
 		this.subname = Objects.requireNonNull(subname);
 		this.graph = Objects.requireNonNull(graph);
 		this.systemASubprograms = Objects.requireNonNull(systemASubprograms);
+		
+		if (!graph.containsSubprogram(subname)) {
+			throw new IllegalStateException();
+		}
+				
+		this.callers = this.graph.getSubprogramCallers(subname)
+				.stream()
+				.filter(s -> !this.systemASubprograms.contains(s))
+				.map(s -> new EntityView(this.graph.getFanOut(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+
+		this.callees = this.graph.getSubprogramCallees(subname)
+				.stream()
+				.filter(s -> !this.systemASubprograms.contains(s))
+				.map(s -> new EntityView(this.graph.getFanIn(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 	}
 	
 	@FXML 
@@ -57,20 +73,6 @@ class AdjacentSubprogramsController {
 		
 		callersTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		calleesTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		
-		if (graph.containsSubprogram(subname)) {
-			Set<String> callers = graph.getSubprogramCallers(subname);
-			callers.removeAll(systemASubprograms);
-			for (String caller : callers) {
-				this.callers.add(new EntityView(graph.getFanOut(caller), caller));
-			}
-			Set<String> callees = graph.getSubprogramCallees(subname);
-			callees.removeAll(systemASubprograms);
-			for (String callee : callees) {
-				this.callees.add(new EntityView(graph.getFanIn(callee), callee));
-			}
-	
-		}
 		
 		fanInClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
 		callerClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
@@ -90,16 +92,18 @@ class AdjacentSubprogramsController {
 		if (selectedCallers.isEmpty() && selectedCallees.isEmpty()) {return;}
 		
 		if (!selectedCallers.isEmpty()) {
-			selectedCallers.forEach(x -> {
-				systemASubprograms.add(x.getName());
-			});
+			systemASubprograms.addAll(selectedCallers
+					.stream()
+					.map(EntityView::getName)
+					.collect(Collectors.toSet()));
 			callers.removeAll(selectedCallers);
 		}
 		
 		if (!selectedCallees.isEmpty()) {
-			selectedCallees.forEach(x -> {
-				systemASubprograms.add(x.getName());
-			});
+			systemASubprograms.addAll(selectedCallees
+					.stream()
+					.map(EntityView::getName)
+					.collect(Collectors.toSet()));
 			callees.removeAll(selectedCallees);
 		}
     }
