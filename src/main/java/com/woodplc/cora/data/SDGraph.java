@@ -1,5 +1,6 @@
 package com.woodplc.cora.data;
 
+import java.util.Map;
 import java.util.Set;
 
 public interface SDGraph {
@@ -25,4 +26,6 @@ public interface SDGraph {
 	Set<String> getVariableCallees(String varName);
 
 	void merge(SDGraph graph);
+
+	Map<String, Set<String>> getVariablesAndCallees(String subname);
 }
