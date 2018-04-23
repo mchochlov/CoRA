@@ -1,6 +1,5 @@
 package com.woodplc.cora.gui.controllers;
 
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.woodplc.cora.data.SDGraph;
@@ -16,11 +15,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 
-class AdjacentSubprogramsController {
+class AdjacentSubprogramsController extends Controller {
 	
-	private final String subname;
-	private final SDGraph graph;
-	private final ObservableList<String> systemASubprograms;
 	private final ObservableList<EntityView> callers;
 	private final ObservableList<EntityView> callees;// = FXCollections.observableArrayList();
 	
@@ -45,13 +41,7 @@ class AdjacentSubprogramsController {
     private TableColumn<EntityView, String> calleeClmn;
 	
 	AdjacentSubprogramsController(String subname, SDGraph graph, ObservableList<String> systemASubprograms) {
-		this.subname = Objects.requireNonNull(subname);
-		this.graph = Objects.requireNonNull(graph);
-		this.systemASubprograms = Objects.requireNonNull(systemASubprograms);
-		
-		if (!graph.containsSubprogram(subname)) {
-			throw new IllegalStateException();
-		}
+		super(subname, graph, systemASubprograms);
 				
 		this.callers = this.graph.getSubprogramCallers(subname)
 				.stream()

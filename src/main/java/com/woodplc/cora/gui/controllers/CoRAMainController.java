@@ -205,29 +205,7 @@ public class CoRAMainController {
 
 	@FXML
 	void flex3AdjacentSubprograms(ActionEvent event) throws IOException {
-		String selectedSubprogram = flex3List.getSelectionModel().getSelectedItem();
-		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
-		
-		if (moduleA.graph == null) {
-			new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found")).showAndWait();
-			return;
-		}
-		
-		FXMLLoader loader = new FXMLLoader(getClass().getResource(Resource.ADJACENT_FXML.path()), Main.getResources());
-		AdjacentSubprogramsController controller = new AdjacentSubprogramsController(
-				selectedSubprogram,
-				moduleA.graph,
-				feature.systemASubprograms);
-		loader.setController(controller);
-		Pane root = (Pane) loader.load();
-		Scene scene = new Scene(root);
-		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
-		
-		Stage stage = new Stage();
-		stage.setScene(scene);
-		stage.setTitle(Main.getResources().getString("adjacent_sub_title"));
-		stage.initModality(Modality.APPLICATION_MODAL);
-		stage.showAndWait();
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title");
 	}
 
 	@FXML
@@ -238,12 +216,48 @@ public class CoRAMainController {
 
 	@FXML
 	void flex3VarControlledSubprograms(ActionEvent event) throws IOException {
-		Stage stage = new Stage();
-		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml"));
-		Scene scene = new Scene(root, 530, 420);
+		loadStage(Resource.VAR_FXML, "var_controlled_title");
+	}
+	
+	private void loadStage(Resource resource, String title) throws IOException {
+		String selectedSubprogram = flex3List.getSelectionModel().getSelectedItem();
+		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
+		
+		if (moduleA.graph == null) {
+			new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found")).showAndWait();
+			return;
+		}
+		
+		FXMLLoader loader = new FXMLLoader(getClass().getResource(resource.path()), Main.getResources());
+		Controller controller = getControllerForResource(resource, selectedSubprogram);
+		loader.setController(controller);
+		Pane root = (Pane) loader.load();
+		Scene scene = new Scene(root);
 		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
+		
+		Stage stage = new Stage();
 		stage.setScene(scene);
-		stage.show();
+		stage.setTitle(Main.getResources().getString(title));
+		stage.initModality(Modality.APPLICATION_MODAL);
+		stage.showAndWait();
+	}
+	
+	private Controller getControllerForResource(Resource resource, String selectedSubprogram) {
+		switch(resource) {
+		case ADJACENT_FXML:
+		return new AdjacentSubprogramsController(
+				selectedSubprogram,
+				moduleA.graph,
+				feature.systemASubprograms);
+		case VAR_FXML:
+		return new VariableControlledController(
+				selectedSubprogram,
+				moduleA.graph,
+				feature.systemASubprograms);
+		default:
+			throw new IllegalArgumentException();
+		}
+		
 	}
 	
 	private static class Module {
