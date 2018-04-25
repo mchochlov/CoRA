@@ -6,6 +6,13 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Code Reunification Application</name>
 
+	<properties>
+		<lucene.version>7.3.0</lucene.version>
+		<antlr.version>4.7</antlr.version>
+		<jupiter.version>5.1.0</jupiter.version>
+		<junit.platform.version>1.1.0</junit.platform.version>
+	</properties>
+	
 	<repositories>
 		<repository>
 			<id>central-repo</id>
@@ -48,14 +55,14 @@
 					<dependency>
 						<groupId>org.junit.platform</groupId>
 						<artifactId>junit-platform-surefire-provider</artifactId>
-						<version>1.1.0</version>
+						<version>${junit.platform.version}</version>
 					</dependency>
 				</dependencies>
 			</plugin>
 			<plugin>
         		<groupId>org.antlr</groupId>
         		<artifactId>antlr4-maven-plugin</artifactId>
-        		<version>4.7</version>                
+        		<version>${antlr.version}</version>                
         		<executions>
           			<execution>
             			<goals>
@@ -74,31 +81,49 @@
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-api</artifactId>
-			<version>5.1.0</version>
+			<version>${jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
-			<version>5.1.0</version>
+			<version>${jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
-			<version>1.1.0</version>
+			<version>${junit.platform.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
       		<groupId>org.antlr</groupId>
       		<artifactId>antlr4-runtime</artifactId>
-      		<version>4.7</version>
+      		<version>${antlr.version}</version>
     	</dependency>
     	<dependency>
   			<groupId>com.google.guava</groupId>
   			<artifactId>guava</artifactId>
   			<version>24.1-jre</version>
 		</dependency>
-    	
+		
+				<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-core</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-queryparser</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-analyzers-common</artifactId>
+			<version>${lucene.version}</version>
+		</dependency>
+		    	
 	</dependencies>
 </project>
