@@ -1,30 +1,110 @@
 package com.woodplc.cora.gui.controllers;
 
-import com.woodplc.cora.gui.model.DataModel;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
+import com.woodplc.cora.data.SDGraph;
+import com.woodplc.cora.gui.model.EntityView;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.ListView;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
 
-public class AdjacentSubprogramsController {
+class AdjacentSubprogramsController {
 	
-	private DataModel model;
+	private final String subname;
+	private final SDGraph graph;
+	private final ObservableList<String> systemASubprograms;
+	private final ObservableList<EntityView> callers;
+	private final ObservableList<EntityView> callees;// = FXCollections.observableArrayList();
 	
 	@FXML
-	private ListView<String> flex3CallersListView;// = new ListView<>(flex3Callers);
+    private Label callersLbl;
 
+    @FXML
+    private TableView<EntityView> callersTbl;
+    @FXML
+    private TableColumn<EntityView, Integer> fanInClmn;
+    @FXML
+    private TableColumn<EntityView, String> callerClmn;
 
-	@FXML
+    @FXML
+    private Label calleesLbl;
+
+    @FXML
+    private TableView<EntityView> calleesTbl;
+    @FXML
+    private TableColumn<EntityView, Integer> fanOutClmn;
+    @FXML
+    private TableColumn<EntityView, String> calleeClmn;
+	
+	AdjacentSubprogramsController(String subname, SDGraph graph, ObservableList<String> systemASubprograms) {
+		this.subname = Objects.requireNonNull(subname);
+		this.graph = Objects.requireNonNull(graph);
+		this.systemASubprograms = Objects.requireNonNull(systemASubprograms);
+		
+		if (!graph.containsSubprogram(subname)) {
+			throw new IllegalStateException();
+		}
+				
+		this.callers = this.graph.getSubprogramCallers(subname)
+				.stream()
+				.filter(s -> !this.systemASubprograms.contains(s))
+				.map(s -> new EntityView(this.graph.getFanOut(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+
+		this.callees = this.graph.getSubprogramCallees(subname)
+				.stream()
+				.filter(s -> !this.systemASubprograms.contains(s))
+				.map(s -> new EntityView(this.graph.getFanIn(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+	}
+	
+	@FXML 
 	void initialize() {
-		this.model = DataModel.instance();
-		flex3CallersListView.setItems(model.getFlex3Callers());
-		flex3CallersListView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		callersLbl.setText(callersLbl.getText() + " " + subname);
+		calleesLbl.setText(calleesLbl.getText() + " " + subname);
+		
+		callersTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		calleesTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		
+		fanInClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
+		callerClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		fanOutClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
+		calleeClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		
+		callersTbl.setItems(callers);
+		callersTbl.getSortOrder().add(fanInClmn);
+		calleesTbl.setItems(callees);
+		calleesTbl.getSortOrder().add(fanOutClmn);
 	}
 
 	@FXML
     void selectAdjacentSubprograms(ActionEvent event) {
-		model.getFlex3Subprograms().addAll(flex3CallersListView
-				.getSelectionModel().getSelectedItems());
+		ObservableList<EntityView> selectedCallers = callersTbl.getSelectionModel().getSelectedItems();
+		ObservableList<EntityView> selectedCallees = calleesTbl.getSelectionModel().getSelectedItems();
+		if (selectedCallers.isEmpty() && selectedCallees.isEmpty()) {return;}
+		
+		if (!selectedCallers.isEmpty()) {
+			systemASubprograms.addAll(selectedCallers
+					.stream()
+					.map(EntityView::getName)
+					.collect(Collectors.toSet()));
+			callers.removeAll(selectedCallers);
+		}
+		
+		if (!selectedCallees.isEmpty()) {
+			systemASubprograms.addAll(selectedCallees
+					.stream()
+					.map(EntityView::getName)
+					.collect(Collectors.toSet()));
+			callees.removeAll(selectedCallees);
+		}
     }
 }

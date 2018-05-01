@@ -12,18 +12,24 @@ import java.util.Set;
 import java.util.stream.StreamSupport;
 
 import com.woodplc.cora.app.Main;
+import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
-import com.woodplc.cora.gui.model.DataModel;
-import com.woodplc.cora.gui.model.DataModel.Subprogram;
+import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -33,18 +39,28 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class CoRAMainController {
-	
-	private final DataModel model = DataModel.instance();
-	
+		
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
+	private final FilteredList<EntityView> subprogramSearchResults = new FilteredList<>(
+	        FXCollections.observableArrayList(
+	            new EntityView(1, "calc_drag_factor"),
+	            new EntityView(2, "calculate_drag_and_inertia_factors"),
+	            new EntityView(3, "read_input_file_main"),
+	            new EntityView(4, "default_buoyancy"),
+	            new EntityView(5, "distributed_buoyancy")
+	        ));
 	
 	private final Module moduleA = new Module();
 	private final Module moduleB = new Module();
 	private final Module moduleC = new Module();
+	
+	private final Feature feature = new Feature();
 	
 	@FXML
 	private Label systemALbl;
@@ -84,13 +100,13 @@ public class CoRAMainController {
 	private ListView<String> flex3List;
 	
 	@FXML
-	private TableColumn<Subprogram, String> flex3ClmnId;
+	private TableColumn<EntityView, Integer> flex3ClmnId;
 
 	@FXML
-	private TableColumn<Subprogram, String> flex3ClmnName;
+	private TableColumn<EntityView, String> flex3ClmnName;
 
 	@FXML
-	private TableView<Subprogram> flex3Tbl;
+	private TableView<EntityView> flex3Tbl;
 	
 	
 
@@ -163,10 +179,17 @@ public class CoRAMainController {
 
 	@FXML
 	void initialize() {
-		flex3List.setItems(model.getFlex3Subprograms());
-		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("id"));
-		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("name"));
-		flex3Tbl.setItems(model.getData());
+		feature.systemASubprograms.addListener((ListChangeListener.Change<? extends String> x) -> {
+			while(x.next()) {
+				if (x.wasAdded() || x.wasRemoved()) {
+					subprogramSearchResults.setPredicate(r -> !feature.systemASubprograms.contains(r.getName()));
+				}
+			}
+		});
+		flex3List.setItems(feature.systemASubprograms);
+		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
+		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		flex3Tbl.setItems(subprogramSearchResults);
 
 	}
 
@@ -175,27 +198,42 @@ public class CoRAMainController {
 		Stage stage = new Stage();
 		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/ClonesDeepRiser.fxml"));
 		Scene scene = new Scene(root, 550, 450);
-		scene.getStylesheets().add(getClass().getResource("/com/woodplc/cora/gui/css/application.css").toExternalForm());
+		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
 		stage.setScene(scene);
 		stage.show();
 	}
 
 	@FXML
 	void flex3AdjacentSubprograms(ActionEvent event) throws IOException {
+		String selectedSubprogram = flex3List.getSelectionModel().getSelectedItem();
+		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
+		
+		if (moduleA.graph == null) {
+			new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found")).showAndWait();
+			return;
+		}
+		
+		FXMLLoader loader = new FXMLLoader(getClass().getResource(Resource.ADJACENT_FXML.path()), Main.getResources());
+		AdjacentSubprogramsController controller = new AdjacentSubprogramsController(
+				selectedSubprogram,
+				moduleA.graph,
+				feature.systemASubprograms);
+		loader.setController(controller);
+		Pane root = (Pane) loader.load();
+		Scene scene = new Scene(root);
+		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
+		
 		Stage stage = new Stage();
-		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml"));
-		Scene scene = new Scene(root, 530, 420);
-		scene.getStylesheets().add(getClass().getResource("/com/woodplc/cora/gui/css/application.css").toExternalForm());
 		stage.setScene(scene);
-		stage.show();
-		//flex3CallersListView.setItems(flex3Callers);
+		stage.setTitle(Main.getResources().getString("adjacent_sub_title"));
+		stage.initModality(Modality.APPLICATION_MODAL);
+		stage.showAndWait();
 	}
 
 	@FXML
 	void flex3MarkSubprogram(ActionEvent event) {
-		Subprogram selectedItem = flex3Tbl.getSelectionModel().getSelectedItem();
-		flex3Tbl.getItems().remove(selectedItem);
-		flex3List.getItems().add(selectedItem.getName());
+		EntityView selectedItem = flex3Tbl.getSelectionModel().getSelectedItem();
+		feature.systemASubprograms.add(selectedItem.getName());
 	}
 
 	@FXML
@@ -203,7 +241,7 @@ public class CoRAMainController {
 		Stage stage = new Stage();
 		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml"));
 		Scene scene = new Scene(root, 530, 420);
-		scene.getStylesheets().add(getClass().getResource("/com/woodplc/cora/gui/css/application.css").toExternalForm());
+		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
 		stage.setScene(scene);
 		stage.show();
 	}
@@ -211,8 +249,16 @@ public class CoRAMainController {
 	private static class Module {
 		private Path path;
 		private SDGraph graph;
-		
+
 		private Module() {}
+	}
+	
+	private static class Feature {
+		private final ObservableList<String> systemASubprograms = FXCollections.observableArrayList();
+		private final ObservableList<String> systemBSubprograms = FXCollections.observableArrayList();
+		private final ObservableList<String> systemCSubprograms = FXCollections.observableArrayList();
+		
+		private Feature() {}
 	}
 	
 	static class ParseTask extends Task<SDGraph> {
