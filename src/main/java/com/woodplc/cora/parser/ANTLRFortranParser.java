@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toSet;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
@@ -20,6 +21,7 @@ import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
@@ -70,6 +72,10 @@ class ANTLRFortranParser implements Parser {
 	
 	private static class FuzzyListener extends FuzzyFortranBaseListener {
 
+		private static final Set<String> RELATIONAL_LOGICAL_EXPRESSSIONS = new HashSet<>(Arrays.asList(
+				"lt", "le", "eq", "ne", "gt", "ge", "and", "or", "neqv", "xor", "eqv", "not"
+				));
+		
 		private final Path fname;
 		private final SDGraph graph = Graphs.getSDGraphInstance();
 		private final Set<String> localCallees = new HashSet<>();
@@ -100,7 +106,8 @@ class ANTLRFortranParser implements Parser {
 			if (ctx.callStatement() != null) {		
 				Set<String> identifiers = ctx.block().ID()
 						.stream()
-						.map(x -> x.getText())
+						.map(TerminalNode::getText)
+						.filter(x -> !RELATIONAL_LOGICAL_EXPRESSSIONS.contains(x))
 						.collect(toSet());
 				graph.addVariablesAndCallees(identifiers, Collections.singleton(ctx.callStatement().ID().getText()));
 			}
@@ -118,7 +125,8 @@ class ANTLRFortranParser implements Parser {
 			if (!callees.isEmpty()) {
 				Set<String> identifiers = ctx.block(0).ID()
 						.stream()
-						.map(x -> x.getText())
+						.map(TerminalNode::getText)
+						.filter(x -> !RELATIONAL_LOGICAL_EXPRESSSIONS.contains(x))
 						.collect(toSet());
 				graph.addVariablesAndCallees(identifiers, callees);
 			}

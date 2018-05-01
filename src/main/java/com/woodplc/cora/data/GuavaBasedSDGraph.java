@@ -1,10 +1,13 @@
 package com.woodplc.cora.data;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
@@ -112,6 +115,15 @@ class GuavaBasedSDGraph implements SDGraph {
 		this.subprograms.putAll(g.subprograms);
 		this.variableCallees.putAll(g.variableCallees);
 		g = null;
+	}
+
+	@Override
+	public Map<String, Set<String>> getVariablesAndCallees(String subname) {
+		return Multimaps.asMap(variableCallees)
+				.entrySet()
+				.stream()
+				.filter(x -> x.getValue().size() > 1 && x.getValue().contains(subname))
+				.collect(Collectors.toMap(Map.Entry::getKey, e -> new HashSet<>(e.getValue())));
 	}
 
 }

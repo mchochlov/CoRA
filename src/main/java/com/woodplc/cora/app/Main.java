@@ -5,7 +5,7 @@ import java.util.ResourceBundle;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
 
@@ -15,7 +15,8 @@ public class Main extends Application {
 		CSS("/com/woodplc/cora/gui/css/application.css"),
 		TEXT("com.woodplc.cora.gui.fxml.CoraResources"),
 		MAIN_FXML("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"),
-		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml");
+		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml"),
+		VAR_FXML("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml");
 		
 		private final String path;
 		
@@ -31,8 +32,8 @@ public class Main extends Application {
 	public void start(Stage primaryStage) {
 		try {
 			primaryStage.setTitle(resources.getString("cora_main_title"));
-			AnchorPane root = (AnchorPane)FXMLLoader.load(getClass().getResource(Resource.MAIN_FXML.path), resources);
-			Scene scene = new Scene(root,600,600);
+			Pane root = (Pane) FXMLLoader.load(getClass().getResource(Resource.MAIN_FXML.path), resources);
+			Scene scene = new Scene(root);
 			scene.getStylesheets().add(getClass().getResource(Resource.CSS.path).toExternalForm());
 			primaryStage.setScene(scene);
 			primaryStage.show();
