@@ -1,0 +1,20 @@
+|FORTRAN 77
+assign backspace block data call close common continue data dimension do else elseif end
+endfile endif entry equivalence external format function goto if implicit inquire intrinsic
+open parameter pause print program read return rewind rewrite save stop subroutine then write
+
+|Fortran 90
+allocatable allocate case contains cycle deallocate elsewhere exit include interface
+intent module namelist nullify only operator optional pointer private procedure public
+recursive result select sequence target use while where
+
+|Fortran 95
+elemental forall pure
+
+|Fortran 2003
+abstract associate asynchronous bind class deferred enum enumerator extends final flush
+generic import non_overridable nopass pass protected value volatile wait
+
+|Fortran 2008
+block codimension concurrent contiguous critical error submodule
+sync all images memory lock unlock
