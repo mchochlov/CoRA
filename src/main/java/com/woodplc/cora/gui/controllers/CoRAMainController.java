@@ -16,6 +16,8 @@ import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.ir.IREngine;
+import com.woodplc.cora.ir.IREngines;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 
@@ -108,7 +110,16 @@ public class CoRAMainController {
 	@FXML
 	private TableView<EntityView> flex3Tbl;
 	
-	
+	private enum ProgressBarColor{
+		BLUE("-fx-accent: blue"),
+		RED("-fx-accent: red"),
+		GREEN("-fx-accent: green");
+		
+		
+		private final String style;
+		
+		private ProgressBarColor(String style) {this.style = style;}
+	}
 
 	@FXML
 	void openFlex3BrowseDlg(ActionEvent event) {
@@ -154,15 +165,21 @@ public class CoRAMainController {
 	private void parse(Module module, Button parseBtn, ProgressBar progressBar) {
 		if (module.path != null) {
 			parseBtn.setDisable(true);
+			progressBar.setStyle(ProgressBarColor.BLUE.style);
 			ParseTask pTask = new ParseTask(module.path);
 			pTask.setOnSucceeded((event) -> {
 				module.graph = pTask.getValue();
 				parseBtn.setDisable(false);
+				progressBar.setStyle(ProgressBarColor.GREEN.style);
 			});
 			
 			pTask.setOnFailed((event) -> {
+				pTask.getException().printStackTrace();
 				module.graph = Graphs.getSDGraphInstance();
 				parseBtn.setDisable(false);
+				progressBar.progressProperty().unbind();
+				progressBar.progressProperty().set(Double.MAX_VALUE);
+				progressBar.setStyle(ProgressBarColor.RED.style);
 			});
 			
 			progressBar.progressProperty().bind(pTask.progressProperty());
@@ -285,8 +302,9 @@ public class CoRAMainController {
 		
 		@Override
 		protected SDGraph call() throws Exception {
+			IREngine engine = IREngines.getLuceneEngineInstance(path);
 			SDGraph graph = Graphs.getSDGraphInstance();
-			Parser parser = Parsers.fortranParser();
+			Parser parser = Parsers.indexableFortranParser(engine);
 			try (DirectoryStream<Path> stream = Files.newDirectoryStream(
 					path, Parsers.fortranFileExtensions()
 					)
@@ -300,6 +318,7 @@ public class CoRAMainController {
 					graph.merge(parser.parse(entry));
 					updateProgress(++parsedFiles, totalFiles);
 				}
+				engine.save();
 				return graph;
 		    }
 		}
