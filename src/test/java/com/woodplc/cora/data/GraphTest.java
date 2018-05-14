@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -18,6 +19,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 import com.woodplc.cora.utils.TestUtils.SoftwareSystem;
@@ -25,19 +27,21 @@ import com.woodplc.cora.utils.Utils.RegEx;
 
 class GraphTest {
 	
+	private final IREngine engine = mock(IREngine.class);
+	
 	private static final String SUBPROGRAM_DEPENDENCIES_FILE = "subprogram_dependencies.txt";
 	private static final int NUM_ENTRIES = 19;
 	private static final int NUM_SUBPROGRAM_MEMBERS = 3;
 	private static final String VARIABLE_CALLEES_FILE = "variable_callees.txt";
 	private static final int NUM_VARIABLE_MEMBERS = 2;
-
+	
 	@Test
 	void testSubProgramCalleesAndCallers() throws IOException, URISyntaxException {
 		List<String> fileEntries = Files.readAllLines(Paths.get(getClass().getResource(SUBPROGRAM_DEPENDENCIES_FILE).toURI()));
 		assertNotNull(fileEntries);
 		assertEquals(NUM_ENTRIES, fileEntries.size());
 		
-		Parser parser = Parsers.fortranParser();
+		Parser parser = Parsers.indexableFortranParser(engine);
 		SDGraph graph = parseFiles(parser, SoftwareSystem.TEST.path());
 		assertNotNull(graph);
 		
@@ -66,7 +70,7 @@ class GraphTest {
 		assertNotNull(fileEntries);
 		assertEquals(NUM_ENTRIES, fileEntries.size());
 		
-		Parser parser = Parsers.fortranParser();
+		Parser parser = Parsers.indexableFortranParser(engine);
 		SDGraph graph = parseFiles(parser, SoftwareSystem.TEST.path());
 		assertNotNull(graph);
 		

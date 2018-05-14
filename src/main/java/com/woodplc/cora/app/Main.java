@@ -2,6 +2,8 @@ package com.woodplc.cora.app;
 	
 import java.util.ResourceBundle;
 
+import com.woodplc.cora.ir.IREngines;
+
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -16,7 +18,8 @@ public class Main extends Application {
 		TEXT("com.woodplc.cora.gui.fxml.CoraResources"),
 		MAIN_FXML("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"),
 		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml"),
-		VAR_FXML("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml");
+		VAR_FXML("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml"),
+		FORTRAN_KEYWORDS("fortran_keywords.txt");
 		
 		private final String path;
 		
@@ -49,4 +52,11 @@ public class Main extends Application {
 	public static ResourceBundle getResources() {
 		return resources;
 	}
+	
+	@Override
+	public void stop() throws Exception {
+		super.stop();
+		IREngines.closeAll();
+	}
+
 }

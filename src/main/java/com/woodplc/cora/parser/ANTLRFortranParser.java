@@ -18,6 +18,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ConsoleErrorListener;
 import org.antlr.v4.runtime.DefaultErrorStrategy;
 import org.antlr.v4.runtime.atn.PredictionMode;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
@@ -33,8 +34,15 @@ import com.woodplc.cora.grammar.FuzzyFortranParser.CallStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfOneLineContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.SubprogramContext;
+import com.woodplc.cora.ir.IREngine;
 
 class ANTLRFortranParser implements Parser {
+
+	private final IREngine engine;
+	
+	public ANTLRFortranParser(IREngine engine) {
+		this.engine = engine;
+	}
 
 	@Override
 	public SDGraph parse(Path path) {
@@ -53,7 +61,7 @@ class ANTLRFortranParser implements Parser {
 		parser.setErrorHandler(new BailErrorStrategy());
 		parser.removeErrorListeners();
 		parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
-		FuzzyListener fl = new FuzzyListener(path);
+		FuzzyListener fl = new FuzzyListener(path, engine, stream);
 		ParseTree tree = null;
 		try {
 			tree = parser.inputFile();
@@ -76,12 +84,16 @@ class ANTLRFortranParser implements Parser {
 				"lt", "le", "eq", "ne", "gt", "ge", "and", "or", "neqv", "xor", "eqv", "not"
 				));
 		
+		private final CharStream charStream;
 		private final Path fname;
+		private final IREngine engine;
 		private final SDGraph graph = Graphs.getSDGraphInstance();
 		private final Set<String> localCallees = new HashSet<>();
 
-		private FuzzyListener(Path fname){
+		private FuzzyListener(Path fname, IREngine engine, CharStream charStream){
 			this.fname = fname;
+			this.engine = engine;
+			this.charStream = charStream;
 		}
 		
 		private SDGraph getSDGraph() {return graph;}
@@ -93,6 +105,7 @@ class ANTLRFortranParser implements Parser {
 					ctx.getStop().getLine(), 
 					fname);
 			graph.addSubprogramAndCallees(subprogram, new HashSet<>(localCallees));
+			engine.index(ctx.ID(0).getText(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
 			localCallees.clear();
 		}
 
