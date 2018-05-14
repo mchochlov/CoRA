@@ -7,6 +7,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
@@ -15,44 +16,6 @@
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.woodplc.cora.gui.controllers.CoRAMainController">
-   <bottom>
-      <HBox spacing="5.0">
-         <children>
-            <VBox HBox.hgrow="ALWAYS">
-               <children>
-                  <Label text="Flex3" />
-                  <ListView fx:id="flex3List" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                     <contextMenu>
-                        <ContextMenu>
-                          <items>
-                            <MenuItem mnemonicParsing="false" onAction="#flex3AdjacentSubprograms" text="Adjacent Subprograms" />
-                              <MenuItem mnemonicParsing="false" onAction="#flex3VarControlledSubprograms" text="Variable Controlled Subprograms" />
-                              <MenuItem mnemonicParsing="false" onAction="#findClonesDeepRiser" text="Find DeepRiser Clone(s)" />
-                              <MenuItem mnemonicParsing="false" text="Find PipeLay Clone(s)" />
-                          </items>
-                        </ContextMenu>
-                     </contextMenu>
-                  </ListView>
-               </children>
-            </VBox>
-            <VBox HBox.hgrow="ALWAYS">
-               <children>
-                  <Label text="Dprflex3" />
-                  <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
-               </children>
-            </VBox>
-            <VBox HBox.hgrow="ALWAYS">
-               <children>
-                  <Label text="mam" />
-                  <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
-               </children>
-            </VBox>
-         </children>
-         <padding>
-            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
-         </padding>
-      </HBox>
-   </bottom>
    <top>
       <VBox prefHeight="81.0" prefWidth="589.0" spacing="5.0" BorderPane.alignment="CENTER">
          <children>
@@ -129,31 +92,77 @@
       </VBox>
    </top>
    <center>
-      <VBox prefHeight="145.0" prefWidth="589.0" spacing="5.0" BorderPane.alignment="CENTER">
-         <children>
-            <HBox spacing="10.0">
+      <SplitPane dividerPositions="0.5" orientation="VERTICAL" BorderPane.alignment="CENTER">
+         <items>
+            <VBox prefHeight="145.0" prefWidth="589.0" spacing="5.0">
                <children>
-                  <TextField prefHeight="25.0" prefWidth="267.0" />
-                  <Button fx:id="flex3SearchBtn" mnemonicParsing="false" onAction="#flex3Search" text="Search" />
+                  <HBox spacing="10.0">
+                     <children>
+                        <TextField fx:id="searchTxtFld" prefHeight="25.0" prefWidth="267.0" promptText="%search_prompt" />
+                        <Button fx:id="flex3SearchBtn" mnemonicParsing="false" onAction="#flex3Search" text="%search_btn" />
+                     </children>
+                  </HBox>
+                  <TableView fx:id="flex3Tbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
+                    <columns>
+                      <TableColumn fx:id="flex3ClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+                      <TableColumn fx:id="flex3ClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
+                    </columns>
+                     <contextMenu>
+                        <ContextMenu>
+                          <items>
+                            <MenuItem mnemonicParsing="false" onAction="#flex3MarkSubprogram" text="Select" />
+                          </items>
+                        </ContextMenu>
+                     </contextMenu>
+                  </TableView>
                </children>
+               <padding>
+                  <Insets bottom="5.0" left="15.0" right="15.0" top="5.0" />
+               </padding>
+            </VBox>
+            <HBox spacing="5.0">
+               <children>
+                  <VBox HBox.hgrow="ALWAYS">
+                     <children>
+                        <Label text="Flex3" />
+                        <ListView fx:id="flex3List" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                           <contextMenu>
+                              <ContextMenu>
+                                <items>
+                                  <MenuItem mnemonicParsing="false" onAction="#flex3AdjacentSubprograms" text="Adjacent Subprograms" />
+                                    <MenuItem mnemonicParsing="false" onAction="#flex3VarControlledSubprograms" text="Variable Controlled Subprograms" />
+                                    <MenuItem mnemonicParsing="false" onAction="#findClonesDeepRiser" text="Find DeepRiser Clone(s)" />
+                                    <MenuItem mnemonicParsing="false" text="Find PipeLay Clone(s)" />
+                                </items>
+                              </ContextMenu>
+                           </contextMenu>
+                        </ListView>
+                     </children>
+                  </VBox>
+                  <VBox HBox.hgrow="ALWAYS">
+                     <children>
+                        <Label text="Dprflex3" />
+                        <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                     </children>
+                  </VBox>
+                  <VBox HBox.hgrow="ALWAYS">
+                     <children>
+                        <Label text="mam" />
+                        <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                     </children>
+                  </VBox>
+               </children>
+               <padding>
+                  <Insets bottom="15.0" left="15.0" right="15.0" top="5.0" />
+               </padding>
             </HBox>
-            <TableView fx:id="flex3Tbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
-              <columns>
-                <TableColumn fx:id="flex3ClmnId" prefWidth="75.0" text="#" />
-                <TableColumn fx:id="flex3ClmnName" prefWidth="518.0" text="Sub-program" />
-              </columns>
-               <contextMenu>
-                  <ContextMenu>
-                    <items>
-                      <MenuItem mnemonicParsing="false" onAction="#flex3MarkSubprogram" text="Select" />
-                    </items>
-                  </ContextMenu>
-               </contextMenu>
-            </TableView>
-         </children>
-         <padding>
-            <Insets left="15.0" right="15.0" />
-         </padding>
-      </VBox>
+         </items>
+         <BorderPane.margin>
+            <Insets />
+         </BorderPane.margin>
+         <opaqueInsets>
+            <Insets />
+         </opaqueInsets>
+      </SplitPane>
    </center>
 </BorderPane>
