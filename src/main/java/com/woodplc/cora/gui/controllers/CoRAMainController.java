@@ -7,13 +7,20 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import com.google.common.hash.Hasher;
+import com.google.common.hash.Hashing;
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
+import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.Graphs;
+import com.woodplc.cora.data.MutableModule;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
@@ -36,6 +43,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -49,20 +57,16 @@ import javafx.stage.Stage;
 public class CoRAMainController {
 		
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
-	private final FilteredList<EntityView> subprogramSearchResults = new FilteredList<>(
-	        FXCollections.observableArrayList(
-	            new EntityView(1, "calc_drag_factor"),
-	            new EntityView(2, "calculate_drag_and_inertia_factors"),
-	            new EntityView(3, "read_input_file_main"),
-	            new EntityView(4, "default_buoyancy"),
-	            new EntityView(5, "distributed_buoyancy")
-	        ));
+	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
 	
-	private final Module moduleA = new Module();
-	private final Module moduleB = new Module();
-	private final Module moduleC = new Module();
+	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
+	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
 	
-	private final Feature feature = new Feature();
+	private final MutableModule moduleA = new MutableModule();
+	private final MutableModule moduleB = new MutableModule();
+	private final MutableModule moduleC = new MutableModule();
+	
+	private final Feature feature = Feature.newBlankFeature();
 	
 	@FXML
 	private Label systemALbl;
@@ -102,6 +106,12 @@ public class CoRAMainController {
 	private ListView<String> flex3List;
 	
 	@FXML
+    private TextField searchTxtFld;
+	
+	@FXML
+    private Button flex3SearchBtn;
+	
+	@FXML
 	private TableColumn<EntityView, Integer> flex3ClmnId;
 
 	@FXML
@@ -137,13 +147,13 @@ public class CoRAMainController {
     }
 
 
-	private void open(Module module, String title, TextField txtField, Label label) {
+	private void open(MutableModule module, String title, TextField txtField, Label label) {
 		dirChooser.setTitle(title);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
 		if (selectedDir != null) {
 			txtField.setText(selectedDir.getAbsolutePath());
-			module.path = selectedDir.toPath();
-			label.setText(module.path.getFileName().toString());
+			module.setPath(selectedDir.toPath());
+			label.setText(module.getPath().getFileName().toString());
 		}
 	}
 	
@@ -162,20 +172,20 @@ public class CoRAMainController {
 		parse(moduleC, systemCParseBtn, systemCProgressBar);
     }
 	
-	private void parse(Module module, Button parseBtn, ProgressBar progressBar) {
-		if (module.path != null) {
+	private void parse(MutableModule module, Button parseBtn, ProgressBar progressBar) {
+		if (module.getPath() != null) {
 			parseBtn.setDisable(true);
 			progressBar.setStyle(ProgressBarColor.BLUE.style);
-			ParseTask pTask = new ParseTask(module.path);
+			ParseTask pTask = new ParseTask(module.getPath());
 			pTask.setOnSucceeded((event) -> {
-				module.graph = pTask.getValue();
+				module.setGraph(pTask.getValue());
 				parseBtn.setDisable(false);
 				progressBar.setStyle(ProgressBarColor.GREEN.style);
 			});
 			
 			pTask.setOnFailed((event) -> {
 				pTask.getException().printStackTrace();
-				module.graph = Graphs.getSDGraphInstance();
+				module.setGraph(Graphs.getSDGraphInstance());
 				parseBtn.setDisable(false);
 				progressBar.progressProperty().unbind();
 				progressBar.progressProperty().set(Double.MAX_VALUE);
@@ -189,24 +199,45 @@ public class CoRAMainController {
 
 	@FXML
 	void flex3Search(ActionEvent event) {
-/*		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("id"));
-		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<Subprogram, String>("name"));
-*/		// flex3Tbl.getColumns().addAll(flex3ClmnId, flex3ClmnName);
+		String query = searchTxtFld.getText();
+		if (query == null || query.isEmpty()) { return;}
+		
+		if (moduleA.getGraph() == null) {
+			graphNotFoundAlert.showAndWait();
+			return;
+		}
+		
+		flex3SearchBtn.setDisable(true);
+		searchResults.clear();
+
+		SearchTask sTask = new SearchTask(query, moduleA.getPath());
+		sTask.setOnSucceeded((e) -> {
+			searchResults.addAll(sTask.getValue());
+			flex3SearchBtn.setDisable(false);
+		});
+		
+		sTask.setOnFailed((e) -> {
+			sTask.getException().printStackTrace();
+			flex3SearchBtn.setDisable(false);
+		});
+		
+		new Thread(sTask).start();
 	}
 
 	@FXML
 	void initialize() {
-		feature.systemASubprograms.addListener((ListChangeListener.Change<? extends String> x) -> {
+		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
 			while(x.next()) {
 				if (x.wasAdded() || x.wasRemoved()) {
-					subprogramSearchResults.setPredicate(r -> !feature.systemASubprograms.contains(r.getName()));
+					filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
 				}
 			}
 		});
-		flex3List.setItems(feature.systemASubprograms);
+		flex3List.setItems(feature.systemASubprograms());
 		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
 		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
-		flex3Tbl.setItems(subprogramSearchResults);
+		flex3Tbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		flex3Tbl.setItems(filteredSearchResults);
 
 	}
 
@@ -227,8 +258,12 @@ public class CoRAMainController {
 
 	@FXML
 	void flex3MarkSubprogram(ActionEvent event) {
-		EntityView selectedItem = flex3Tbl.getSelectionModel().getSelectedItem();
-		feature.systemASubprograms.add(selectedItem.getName());
+		ObservableList<EntityView> selectedItems = flex3Tbl.getSelectionModel().getSelectedItems();
+		if (selectedItems.isEmpty()) {return;}
+		feature.systemASubprograms().addAll(selectedItems
+				.stream()
+				.map(EntityView::getName)
+				.collect(Collectors.toList()));
 	}
 
 	@FXML
@@ -240,8 +275,8 @@ public class CoRAMainController {
 		String selectedSubprogram = flex3List.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
-		if (moduleA.graph == null) {
-			new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found")).showAndWait();
+		if (moduleA.getGraph() == null) {
+			graphNotFoundAlert.showAndWait();
 			return;
 		}
 		
@@ -264,32 +299,17 @@ public class CoRAMainController {
 		case ADJACENT_FXML:
 		return new AdjacentSubprogramsController(
 				selectedSubprogram,
-				moduleA.graph,
-				feature.systemASubprograms);
+				moduleA.getGraph(),
+				feature.systemASubprograms());
 		case VAR_FXML:
 		return new VariableControlledController(
 				selectedSubprogram,
-				moduleA.graph,
-				feature.systemASubprograms);
+				moduleA.getGraph(),
+				feature.systemASubprograms());
 		default:
 			throw new IllegalArgumentException();
 		}
 		
-	}
-	
-	private static class Module {
-		private Path path;
-		private SDGraph graph;
-
-		private Module() {}
-	}
-	
-	private static class Feature {
-		private final ObservableList<String> systemASubprograms = FXCollections.observableArrayList();
-		private final ObservableList<String> systemBSubprograms = FXCollections.observableArrayList();
-		private final ObservableList<String> systemCSubprograms = FXCollections.observableArrayList();
-		
-		private Feature() {}
 	}
 	
 	static class ParseTask extends Task<SDGraph> {
