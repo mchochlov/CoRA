@@ -344,4 +344,25 @@ public class CoRAMainController {
 		}
 		
 	}
+	
+	static class SearchTask extends Task<List<EntityView>> {
+		
+		private final String query;
+		private final Path path;
+
+		SearchTask(String query, Path path){ 
+			this.query = Objects.requireNonNull(query);
+			this.path = Objects.requireNonNull(path);
+		}
+		
+		@Override
+		protected List<EntityView> call() throws Exception {
+			IREngine engine = IREngines.getLuceneEngineInstance(path);
+			final AtomicInteger counter = new AtomicInteger(0);
+			return engine.search(query).stream()
+					.map(res -> new EntityView(counter.incrementAndGet(), res))
+					.collect(Collectors.toList());
+		}
+		
+	}
 }
