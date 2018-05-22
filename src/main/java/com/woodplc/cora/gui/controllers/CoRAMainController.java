@@ -57,7 +57,9 @@ import javafx.stage.Stage;
 public class CoRAMainController {
 		
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
+	private File lastKnownDir = null;
 	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
+	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
 	
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
@@ -71,13 +73,13 @@ public class CoRAMainController {
 	@FXML
 	private Label systemALbl;
 	@FXML
-	private TextField flex3DirFld;
+	private TextField systemADirFld;
 	@FXML
-	private Button flex3BrowseBtn;
+	private Button systemABrowseBtn;
 	@FXML
-	private Button flex3ParseBtn;
+	private Button systemAParseBtn;
 	@FXML
-	private ProgressBar flex3ProgressBar;
+	private ProgressBar systemAProgressBar;
 	
 	@FXML
     private Label systemBLbl;
@@ -103,22 +105,34 @@ public class CoRAMainController {
 	
 	
 	@FXML
-	private ListView<String> flex3List;
+	private ListView<String> systemASubprogramList;
+    @FXML
+    private ListView<String> systemBSubprogramList;
+    @FXML
+    private ListView<String> systemCSubprogramList;
 	
 	@FXML
     private TextField searchTxtFld;
 	
 	@FXML
-    private Button flex3SearchBtn;
+    private Button systemASearchBtn;
 	
 	@FXML
-	private TableColumn<EntityView, Integer> flex3ClmnId;
+	private TableColumn<EntityView, Integer> systemAClmnId;
 
 	@FXML
-	private TableColumn<EntityView, String> flex3ClmnName;
+	private TableColumn<EntityView, String> systemAClmnName;
 
 	@FXML
-	private TableView<EntityView> flex3Tbl;
+	private TableView<EntityView> systemASearchResultTbl;
+	
+	@FXML
+    private Label systemABottomLbl;
+    @FXML
+    private Label systemBBottomLbl;
+    @FXML
+    private Label systemCBottomLbl;
+
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -132,34 +146,37 @@ public class CoRAMainController {
 	}
 
 	@FXML
-	void openFlex3BrowseDlg(ActionEvent event) {
-		open(moduleA, Main.getResources().getString("select_system_a"), flex3DirFld, systemALbl);
+	void openSystemABrowseDlg(ActionEvent event) {
+		open(moduleA, Main.getResources().getString("select_system_a"), systemADirFld, systemALbl, systemABottomLbl);
 	}
 	
 	@FXML
     void openSystemBBrowseDlg(ActionEvent event) {
-		open(moduleB, Main.getResources().getString("select_system_b"), systemBDirFld, systemBLbl);
+		open(moduleB, Main.getResources().getString("select_system_b"), systemBDirFld, systemBLbl, systemBBottomLbl);
     }
 
     @FXML
     void openSystemCBrowseDlg(ActionEvent event) {
-		open(moduleC, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl);
+		open(moduleC, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl, systemCBottomLbl);
     }
 
 
-	private void open(MutableModule module, String title, TextField txtField, Label label) {
+	private void open(MutableModule module, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
+		dirChooser.setInitialDirectory(lastKnownDir);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
 		if (selectedDir != null) {
 			txtField.setText(selectedDir.getAbsolutePath());
 			module.setPath(selectedDir.toPath());
 			label.setText(module.getPath().getFileName().toString());
+			bLabel.setText(module.getPath().getFileName().toString());
+			lastKnownDir = selectedDir;
 		}
 	}
 	
 	@FXML
-	void parseFlex3(ActionEvent event) {
-		parse(moduleA, flex3ParseBtn, flex3ProgressBar);
+	void parseSystemA(ActionEvent event) {
+		parse(moduleA, systemAParseBtn, systemAProgressBar);
 	}
 	
 	@FXML
@@ -198,7 +215,7 @@ public class CoRAMainController {
 	}
 
 	@FXML
-	void flex3Search(ActionEvent event) {
+	void systemASearch(ActionEvent event) {
 		String query = searchTxtFld.getText();
 		if (query == null || query.isEmpty()) { return;}
 		
@@ -207,18 +224,18 @@ public class CoRAMainController {
 			return;
 		}
 		
-		flex3SearchBtn.setDisable(true);
+		systemASearchBtn.setDisable(true);
 		searchResults.clear();
 
 		SearchTask sTask = new SearchTask(query, moduleA.getPath());
 		sTask.setOnSucceeded((e) -> {
 			searchResults.addAll(sTask.getValue());
-			flex3SearchBtn.setDisable(false);
+			systemASearchBtn.setDisable(false);
 		});
 		
 		sTask.setOnFailed((e) -> {
 			sTask.getException().printStackTrace();
-			flex3SearchBtn.setDisable(false);
+			systemASearchBtn.setDisable(false);
 		});
 		
 		new Thread(sTask).start();
@@ -233,32 +250,44 @@ public class CoRAMainController {
 				}
 			}
 		});
-		flex3List.setItems(feature.systemASubprograms());
-		flex3ClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		flex3ClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
-		flex3Tbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		flex3Tbl.setItems(filteredSearchResults);
+		systemASubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemBSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemCSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemASubprogramList.setItems(feature.systemASubprograms());
+		systemBSubprogramList.setItems(feature.systemBSubprograms());
+		systemCSubprogramList.setItems(feature.systemCSubprograms());
+		
+		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
+		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemASearchResultTbl.setItems(filteredSearchResults);
 
 	}
 
 	@FXML
-	void findClonesDeepRiser(ActionEvent event) throws IOException {
+	void findClonesSystemB(ActionEvent event) throws IOException {
 		Stage stage = new Stage();
 		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/ClonesDeepRiser.fxml"));
 		Scene scene = new Scene(root, 550, 450);
 		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
+		stage.setTitle("Clones in system B");
 		stage.setScene(scene);
 		stage.show();
 	}
 
 	@FXML
-	void flex3AdjacentSubprograms(ActionEvent event) throws IOException {
+    void findClonesSystemC(ActionEvent event) {
+		//TODO
+    }
+	
+	@FXML
+	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
 		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title");
 	}
 
 	@FXML
-	void flex3MarkSubprogram(ActionEvent event) {
-		ObservableList<EntityView> selectedItems = flex3Tbl.getSelectionModel().getSelectedItems();
+	void systemAMarkSubprogram(ActionEvent event) {
+		ObservableList<EntityView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
 		if (selectedItems.isEmpty()) {return;}
 		feature.systemASubprograms().addAll(selectedItems
 				.stream()
@@ -267,12 +296,38 @@ public class CoRAMainController {
 	}
 
 	@FXML
-	void flex3VarControlledSubprograms(ActionEvent event) throws IOException {
+	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
 		loadStage(Resource.VAR_FXML, "var_controlled_title");
 	}
 	
+	@FXML
+    void removeItemsSystemA(ActionEvent event) {
+		removeItems(systemASubprogramList, feature.systemASubprograms());
+    }
+
+    @FXML
+    void removeItemsSystemB(ActionEvent event) {
+		removeItems(systemBSubprogramList, feature.systemBSubprograms());
+    }
+
+    @FXML
+    void removeItemsSystemC(ActionEvent event) {
+		removeItems(systemCSubprogramList, feature.systemCSubprograms());
+    }
+    
+    private void removeItems(ListView<String> subprogramList, ObservableList<String> list) {
+    	ObservableList<String> selectedItems = subprogramList.getSelectionModel().getSelectedItems();
+		if (selectedItems.isEmpty()) {return;}
+		list.removeAll(selectedItems);
+    }
+	
 	private void loadStage(Resource resource, String title) throws IOException {
-		String selectedSubprogram = flex3List.getSelectionModel().getSelectedItem();
+		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+			multipleSelectionAlert.showAndWait();
+			return;
+		}
+		
+		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
 		if (moduleA.getGraph() == null) {

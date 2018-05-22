@@ -20,4 +20,8 @@ public final class Feature {
 	}
 	
 	public ObservableList<String> systemASubprograms(){return systemASubprograms;}
+
+	public ObservableList<String> systemBSubprograms() {return systemBSubprograms;}
+	
+	public ObservableList<String> systemCSubprograms() {return systemCSubprograms;}
 }
