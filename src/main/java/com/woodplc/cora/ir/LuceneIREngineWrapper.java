@@ -14,19 +14,25 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.SearcherManager;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.util.BytesRef;
 
 import com.woodplc.cora.app.Main.Resource;
 
@@ -143,6 +149,88 @@ final class LuceneIREngineWrapper implements IREngine {
 			if (searchManager != null) {searchManager.close();}
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public List<String> getDocumentTermVector(String subname) {
+		if (subname == null || subname.isEmpty()) {
+			throw new IllegalArgumentException();
+		}
+		
+		IndexSearcher searcher = null;
+		try {
+			searcher = searchManager.acquire();
+			Query query = new TermQuery(new Term(Fields.NAME.name(), subname));
+			
+			ScoreDoc[] hits = searcher.search(query, MAX_HITS).scoreDocs;
+			
+			if (hits.length != 1) {
+				throw new IllegalStateException();
+			}
+			
+			Terms terms = searcher.getIndexReader().getTermVector(hits[0].doc, Fields.DATA.name());
+			TermsEnum iter = terms.iterator();
+			BytesRef ref = iter.next();
+			List<String> termVector = new ArrayList<>();
+			while(ref != null) {
+				termVector.add(ref.utf8ToString());
+				ref = iter.next();
+			}
+			return termVector;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return Collections.emptyList();
+		} finally {
+			try {
+				searchManager.release(searcher);
+				searcher = null;
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public List<String> moreLikeThis(List<String> termVector, String query) {
+		Objects.requireNonNull(termVector);
+		if (termVector.isEmpty() && (query == null || query.isEmpty())) {
+			throw new IllegalArgumentException();
+		}
+		
+		IndexSearcher searcher = null;
+		try {
+			searcher = searchManager.acquire();
+			
+			BooleanQuery.Builder termQueryBuilder = new BooleanQuery.Builder();
+			
+			termVector.forEach(x -> termQueryBuilder.add(new TermQuery(new Term(Fields.DATA.name(), x)), Occur.SHOULD));
+			
+			Query optionalQuery = null;
+			if (query != null && !query.isEmpty()) {
+				optionalQuery = dataFieldQueryParser.parse(query);
+				termQueryBuilder.add(optionalQuery, Occur.SHOULD);
+			}
+			
+			BooleanQuery finalQuery = termQueryBuilder.build();
+			
+			ScoreDoc[] hits = searcher.search(finalQuery, MAX_HITS).scoreDocs;
+			
+			List<String> matchingSubprograms = new ArrayList<>();
+			for (ScoreDoc hit : hits) {
+				matchingSubprograms.add(searcher.doc(hit.doc).get(Fields.NAME.name()));
+			}
+			return matchingSubprograms;			
+		} catch (IOException | ParseException e) {
+			e.printStackTrace();
+			return Collections.emptyList();
+		} finally {
+			try {
+				searchManager.release(searcher);
+				searcher = null;
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
