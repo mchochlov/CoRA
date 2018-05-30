@@ -31,10 +31,10 @@
                         <Insets top="5.0" />
                      </HBox.margin>
                   </Label>
-                  <TextField fx:id="flex3DirFld" />
-                  <Button fx:id="flex3BrowseBtn" mnemonicParsing="false" onAction="#openFlex3BrowseDlg" text="%browse_btn" />
-                  <Button fx:id="flex3ParseBtn" mnemonicParsing="false" onAction="#parseFlex3" text="%parse_btn" />
-                  <ProgressBar fx:id="flex3ProgressBar" prefHeight="18.0" prefWidth="150.0" progress="0.0">
+                  <TextField fx:id="systemADirFld" />
+                  <Button fx:id="systemABrowseBtn" mnemonicParsing="false" onAction="#openSystemABrowseDlg" text="%browse_btn" />
+                  <Button fx:id="systemAParseBtn" mnemonicParsing="false" onAction="#parseSystemA" text="%parse_btn" />
+                  <ProgressBar fx:id="systemAProgressBar" prefHeight="18.0" prefWidth="150.0" progress="0.0">
                      <HBox.margin>
                         <Insets top="5.0" />
                      </HBox.margin>
@@ -99,18 +99,18 @@
                   <HBox spacing="10.0">
                      <children>
                         <TextField fx:id="searchTxtFld" prefHeight="25.0" prefWidth="267.0" promptText="%search_prompt" />
-                        <Button fx:id="flex3SearchBtn" mnemonicParsing="false" onAction="#flex3Search" text="%search_btn" />
+                        <Button fx:id="systemASearchBtn" mnemonicParsing="false" onAction="#systemASearch" text="%search_btn" />
                      </children>
                   </HBox>
-                  <TableView fx:id="flex3Tbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
+                  <TableView fx:id="systemASearchResultTbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
                     <columns>
-                      <TableColumn fx:id="flex3ClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
-                      <TableColumn fx:id="flex3ClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
+                      <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+                      <TableColumn fx:id="systemAClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
                     </columns>
                      <contextMenu>
                         <ContextMenu>
                           <items>
-                            <MenuItem mnemonicParsing="false" onAction="#flex3MarkSubprogram" text="Select" />
+                            <MenuItem mnemonicParsing="false" onAction="#systemAMarkSubprogram" text="%select_btn" />
                           </items>
                         </ContextMenu>
                      </contextMenu>
@@ -124,15 +124,21 @@
                <children>
                   <VBox HBox.hgrow="ALWAYS">
                      <children>
-                        <Label text="Flex3" />
-                        <ListView fx:id="flex3List" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                        <HBox spacing="10.0">
+                           <children>
+                              <Label prefWidth="60.0" text="%system_a_lbl" />
+                              <Label fx:id="systemABottomLbl" prefWidth="55.0" />
+                           </children>
+                        </HBox>
+                        <ListView fx:id="systemASubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                            <contextMenu>
                               <ContextMenu>
                                 <items>
-                                  <MenuItem mnemonicParsing="false" onAction="#flex3AdjacentSubprograms" text="Adjacent Subprograms" />
-                                    <MenuItem mnemonicParsing="false" onAction="#flex3VarControlledSubprograms" text="Variable Controlled Subprograms" />
-                                    <MenuItem mnemonicParsing="false" onAction="#findClonesDeepRiser" text="Find DeepRiser Clone(s)" />
-                                    <MenuItem mnemonicParsing="false" text="Find PipeLay Clone(s)" />
+                                  <MenuItem mnemonicParsing="false" onAction="#systemAAdjacentSubprograms" text="%adj_sub_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#systemAVarControlledSubprograms" text="%var_control_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#findClonesSystemB" text="%find_clonesb_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#findClonesSystemC" text="%find_clonesc_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemA" text="%remove_item" />
                                 </items>
                               </ContextMenu>
                            </contextMenu>
@@ -141,14 +147,38 @@
                   </VBox>
                   <VBox HBox.hgrow="ALWAYS">
                      <children>
-                        <Label text="Dprflex3" />
-                        <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                        <HBox spacing="10.0">
+                           <children>
+                              <Label prefWidth="60.0" text="%system_b_lbl" />
+                              <Label fx:id="systemBBottomLbl" prefWidth="55.0" />
+                           </children>
+                        </HBox>
+                        <ListView fx:id="systemBSubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                           <contextMenu>
+                              <ContextMenu>
+                                 <items>
+                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemB" text="%remove_item" />
+                                 </items>
+                              </ContextMenu>
+                           </contextMenu></ListView>
                      </children>
                   </VBox>
                   <VBox HBox.hgrow="ALWAYS">
                      <children>
-                        <Label text="mam" />
-                        <ListView prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                        <HBox spacing="10.0">
+                           <children>
+                              <Label prefWidth="60.0" text="%system_c_lbl" />
+                              <Label fx:id="systemCBottomLbl" prefWidth="55.0" />
+                           </children>
+                        </HBox>
+                        <ListView fx:id="systemCSubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                           <contextMenu>
+                              <ContextMenu>
+                                 <items>
+                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemC" text="%remove_item" />
+                                 </items>
+                              </ContextMenu>
+                           </contextMenu></ListView>
                      </children>
                   </VBox>
                </children>
