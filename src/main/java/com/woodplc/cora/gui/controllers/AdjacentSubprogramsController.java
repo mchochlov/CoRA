@@ -1,11 +1,10 @@
 package com.woodplc.cora.gui.controllers;
 
+import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
 
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,7 +17,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 class AdjacentSubprogramsController extends Controller {
 	
 	private final ObservableList<EntityView> callers;
-	private final ObservableList<EntityView> callees;// = FXCollections.observableArrayList();
+	private final ObservableList<EntityView> callees;
 	
 	@FXML
     private Label callersLbl;
@@ -40,20 +39,11 @@ class AdjacentSubprogramsController extends Controller {
     @FXML
     private TableColumn<EntityView, String> calleeClmn;
 	
-	AdjacentSubprogramsController(String subname, SDGraph graph, ObservableList<String> systemASubprograms) {
-		super(subname, graph, systemASubprograms);
-				
-		this.callers = this.graph.getSubprogramCallers(subname)
-				.stream()
-				.filter(s -> !this.systemASubprograms.contains(s))
-				.map(s -> new EntityView(this.graph.getFanOut(s), s))
-				.collect(Collectors.toCollection(FXCollections::observableArrayList));
-
-		this.callees = this.graph.getSubprogramCallees(subname)
-				.stream()
-				.filter(s -> !this.systemASubprograms.contains(s))
-				.map(s -> new EntityView(this.graph.getFanIn(s), s))
-				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+	AdjacentSubprogramsController(String subname, ObservableList<String> systemSubprograms,
+			ObservableList<EntityView> callers, ObservableList<EntityView> callees) {
+		super(subname, systemSubprograms);
+		this.callers = Objects.requireNonNull(callers);
+		this.callees = Objects.requireNonNull(callees);
 	}
 	
 	@FXML 
@@ -82,7 +72,7 @@ class AdjacentSubprogramsController extends Controller {
 		if (selectedCallers.isEmpty() && selectedCallees.isEmpty()) {return;}
 		
 		if (!selectedCallers.isEmpty()) {
-			systemASubprograms.addAll(selectedCallers
+			systemSubprograms.addAll(selectedCallers
 					.stream()
 					.map(EntityView::getName)
 					.collect(Collectors.toSet()));
@@ -90,7 +80,7 @@ class AdjacentSubprogramsController extends Controller {
 		}
 		
 		if (!selectedCallees.isEmpty()) {
-			systemASubprograms.addAll(selectedCallees
+			systemSubprograms.addAll(selectedCallees
 					.stream()
 					.map(EntityView::getName)
 					.collect(Collectors.toSet()));

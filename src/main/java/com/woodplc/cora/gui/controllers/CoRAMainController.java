@@ -7,15 +7,16 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Feature;
@@ -48,7 +49,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Pane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
@@ -266,23 +266,17 @@ public class CoRAMainController {
 
 	@FXML
 	void findClonesSystemB(ActionEvent event) throws IOException {
-		Stage stage = new Stage();
-		AnchorPane root = (AnchorPane) FXMLLoader.load(getClass().getResource("/com/woodplc/cora/gui/fxml/ClonesDeepRiser.fxml"));
-		Scene scene = new Scene(root, 550, 450);
-		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
-		stage.setTitle("Clones in system B");
-		stage.setScene(scene);
-		stage.show();
+		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms());
 	}
 
 	@FXML
-    void findClonesSystemC(ActionEvent event) {
-		//TODO
+    void findClonesSystemC(ActionEvent event) throws IOException {
+		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms());
     }
 	
 	@FXML
 	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title");
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms());
 	}
 
 	@FXML
@@ -297,7 +291,7 @@ public class CoRAMainController {
 
 	@FXML
 	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title");
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms());
 	}
 	
 	@FXML
@@ -321,7 +315,8 @@ public class CoRAMainController {
 		list.removeAll(selectedItems);
     }
 	
-	private void loadStage(Resource resource, String title) throws IOException {
+	private void loadStage(Resource resource, String title, 
+			MutableModule module, ObservableList<String> fSubprograms) throws IOException {
 		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
 			multipleSelectionAlert.showAndWait();
 			return;
@@ -330,13 +325,13 @@ public class CoRAMainController {
 		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
-		if (moduleA.getGraph() == null) {
+		if (module.getGraph() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
 		
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(resource.path()), Main.getResources());
-		Controller controller = getControllerForResource(resource, selectedSubprogram);
+		Controller controller = getControllerForResource(resource, selectedSubprogram, fSubprograms, module);
 		loader.setController(controller);
 		Pane root = (Pane) loader.load();
 		Scene scene = new Scene(root);
@@ -349,22 +344,59 @@ public class CoRAMainController {
 		stage.showAndWait();
 	}
 	
-	private Controller getControllerForResource(Resource resource, String selectedSubprogram) {
+	private Controller getControllerForResource(Resource resource, String selectedSubprogram,
+			ObservableList<String> fSubprograms, MutableModule module) {
 		switch(resource) {
 		case ADJACENT_FXML:
-		return new AdjacentSubprogramsController(
-				selectedSubprogram,
-				moduleA.getGraph(),
-				feature.systemASubprograms());
+		return constructASController(selectedSubprogram, fSubprograms);
 		case VAR_FXML:
-		return new VariableControlledController(
+		return constructVCController(selectedSubprogram, fSubprograms);
+		case CLONES_FXML:
+		return new ClonesController(
 				selectedSubprogram,
-				moduleA.getGraph(),
-				feature.systemASubprograms());
+				fSubprograms,
+				moduleA.getPath(),
+				module.getPath());
 		default:
 			throw new IllegalArgumentException();
 		}
 		
+	}
+	
+	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
+			ObservableList<String> fSubprograms) {
+		ObservableList<EntityView> callers = moduleA.getGraph().getSubprogramCallers(selectedSubprogram)
+				.stream()
+				.filter(s -> !fSubprograms.contains(s))
+				.map(s -> new EntityView(moduleA.getGraph().getFanOut(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+
+		ObservableList<EntityView> callees = moduleA.getGraph().getSubprogramCallees(selectedSubprogram)
+				.stream()
+				.filter(s -> !fSubprograms.contains(s))
+				.map(s -> new EntityView(moduleA.getGraph().getFanIn(s), s))
+				.collect(Collectors.toCollection(FXCollections::observableArrayList));
+		
+		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
+	}
+	
+	private VariableControlledController constructVCController(String selectedSubprogram,
+			ObservableList<String> fSubprograms) {
+		final Set<String> duplicates = new HashSet<>();
+		Map<String, Set<String>> variables = moduleA.getGraph().getVariablesAndCallees(selectedSubprogram)
+			.entrySet()
+			.stream()
+			.map(x -> {
+				x.getValue().removeAll(fSubprograms);
+				x.getValue().removeAll(duplicates);
+				duplicates.addAll(x.getValue());
+				return x;
+			})
+			.filter(x -> !x.getValue().isEmpty())
+			.sorted((x, y) -> Integer.compare(x.getValue().size(), y.getValue().size()))
+			.collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue(), (x, y) -> x, LinkedHashMap::new));
+		
+		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 	
 	static class ParseTask extends Task<SDGraph> {

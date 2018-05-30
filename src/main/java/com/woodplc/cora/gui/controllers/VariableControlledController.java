@@ -1,12 +1,9 @@
 package com.woodplc.cora.gui.controllers;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
-
-import com.woodplc.cora.data.SDGraph;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -27,19 +24,10 @@ class VariableControlledController extends Controller {
 	@FXML
     private TreeView<String> varTreeView;
 	
-	VariableControlledController(String subname, SDGraph graph, ObservableList<String> systemASubprograms) {
-		super(subname, graph, systemASubprograms);
+	VariableControlledController(String subname, ObservableList<String> systemSubprograms, Map<String, Set<String>> variables) {
+		super(subname, systemSubprograms);
 			
-		variables = this.graph.getVariablesAndCallees(subname)
-				.entrySet()
-				.stream()
-				.map(x -> {
-					x.getValue().removeAll(systemASubprograms);
-					return x;
-				})
-				.filter(x -> !x.getValue().isEmpty())
-				.sorted((x, y) -> Integer.compare(x.getValue().size(), y.getValue().size()))
-				.collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue(), (x, y) -> x, LinkedHashMap::new));
+		this.variables = Objects.requireNonNull(variables);
 	}
 
 	@FXML 
@@ -71,7 +59,7 @@ class VariableControlledController extends Controller {
 				if (parent.getChildren().isEmpty()) {
 					root.getChildren().remove(parent);
 				}
-				this.systemASubprograms.add(item.getValue());
+				this.systemSubprograms.add(item.getValue());
 			}
 		}
     }
