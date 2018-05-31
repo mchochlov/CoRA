@@ -2,11 +2,11 @@ package com.woodplc.cora.data;
 
 import java.nio.file.Path;
 
-public final class MutableModule {
+public final class ImmutableModule {
 	private Path path;
 	private SDGraph graph;
 
-	public MutableModule() {}
+	public ImmutableModule() {}
 
 	public Path getPath() {
 		return path;

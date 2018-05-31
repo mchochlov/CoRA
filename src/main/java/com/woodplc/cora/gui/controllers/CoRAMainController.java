@@ -21,7 +21,7 @@ import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.Graphs;
-import com.woodplc.cora.data.MutableModule;
+import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
@@ -64,9 +64,9 @@ public class CoRAMainController {
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
 	
-	private final MutableModule moduleA = new MutableModule();
-	private final MutableModule moduleB = new MutableModule();
-	private final MutableModule moduleC = new MutableModule();
+	private final ImmutableModule moduleA = new ImmutableModule();
+	private final ImmutableModule moduleB = new ImmutableModule();
+	private final ImmutableModule moduleC = new ImmutableModule();
 	
 	private final Feature feature = Feature.newBlankFeature();
 	
@@ -161,7 +161,7 @@ public class CoRAMainController {
     }
 
 
-	private void open(MutableModule module, String title, TextField txtField, Label label, Label bLabel) {
+	private void open(ImmutableModule module, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
@@ -189,7 +189,7 @@ public class CoRAMainController {
 		parse(moduleC, systemCParseBtn, systemCProgressBar);
     }
 	
-	private void parse(MutableModule module, Button parseBtn, ProgressBar progressBar) {
+	private void parse(ImmutableModule module, Button parseBtn, ProgressBar progressBar) {
 		if (module.getPath() != null) {
 			parseBtn.setDisable(true);
 			progressBar.setStyle(ProgressBarColor.BLUE.style);
@@ -316,7 +316,7 @@ public class CoRAMainController {
     }
 	
 	private void loadStage(Resource resource, String title, 
-			MutableModule module, ObservableList<String> fSubprograms) throws IOException {
+			ImmutableModule module, ObservableList<String> fSubprograms) throws IOException {
 		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
 			multipleSelectionAlert.showAndWait();
 			return;
@@ -345,7 +345,7 @@ public class CoRAMainController {
 	}
 	
 	private Controller getControllerForResource(Resource resource, String selectedSubprogram,
-			ObservableList<String> fSubprograms, MutableModule module) {
+			ObservableList<String> fSubprograms, ImmutableModule module) {
 		switch(resource) {
 		case ADJACENT_FXML:
 		return constructASController(selectedSubprogram, fSubprograms);
