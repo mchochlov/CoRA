@@ -418,7 +418,7 @@ public class CoRAMainController {
 		
 		@Override
 		protected ImmutableModule call() throws Exception {
-			IREngine engine = IREngines.getLuceneEngineInstance(path);
+			IREngine engine = IREngines.newWriteableInstance(path);
 			SDGraph graph = Graphs.getSDGraphInstance();
 			Parser parser = Parsers.indexableFortranParser(engine);
 			try (DirectoryStream<Path> stream = Files.newDirectoryStream(

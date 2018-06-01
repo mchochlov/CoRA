@@ -3,8 +3,10 @@ package com.woodplc.cora.ir;
 import java.util.List;
 
 public interface IREngine {
-
+	
 	List<String> getDocumentTermVector(String subname);
+
+	boolean indexExists();
 	
 	void index(String subname, String textData);
 	
