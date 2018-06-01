@@ -1,6 +1,5 @@
 package com.woodplc.cora.gui.controllers;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -8,7 +7,6 @@ import java.util.stream.Collectors;
 
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
-import com.woodplc.cora.ir.IREngines;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -26,14 +24,14 @@ import javafx.scene.control.cell.PropertyValueFactory;
 class ClonesController extends Controller {
 
 	private final ObservableList<EntityView> clones = FXCollections.observableArrayList();
-	private final Path moduleAPath;
-	private final Path moduleOtherPath;
+	private final IREngine engineA;
+	private final IREngine engineOther;
 	
-	ClonesController(String subname, ObservableList<String> systemSubprograms, Path moduleAPath, Path moduleOtherPath) {
+	ClonesController(String subname, ObservableList<String> systemSubprograms, IREngine engineA, IREngine engineOther) {
 		super(subname, systemSubprograms);
 		
-		this.moduleAPath = Objects.requireNonNull(moduleAPath);
-		this.moduleOtherPath = Objects.requireNonNull(moduleOtherPath);
+		this.engineA = Objects.requireNonNull(engineA);
+		this.engineOther = Objects.requireNonNull(engineOther);
 	}
 
 	@FXML
@@ -68,7 +66,7 @@ class ClonesController extends Controller {
 		searchBtn.setDisable(true);
 		clones.clear();
 
-		FindClonesTask sTask = new FindClonesTask(subname, query, moduleAPath, moduleOtherPath);
+		FindClonesTask sTask = new FindClonesTask(subname, query, engineA, engineOther);
 		sTask.setOnSucceeded((e) -> {
 			sTask.getValue().removeIf(x -> systemSubprograms.contains(x.getName()));
 			clones.addAll(sTask.getValue());
@@ -99,24 +97,21 @@ class ClonesController extends Controller {
 		
 		private final String subname;
 		private final String query;
-		private final Path pathToA;
-		private final Path pathToOtherSystem;
+		private final IREngine engineA;
+		private final IREngine engineOther;
 
-		FindClonesTask(String subname, String query, Path pathToA, Path pathToOtherSystem){
+		FindClonesTask(String subname, String query, IREngine engineA, IREngine engineOther){
 			this.subname = Objects.requireNonNull(subname);
 			this.query = Objects.requireNonNull(query);
-			this.pathToA = Objects.requireNonNull(pathToA);
-			this.pathToOtherSystem = Objects.requireNonNull(pathToOtherSystem);
+			this.engineA = Objects.requireNonNull(engineA);
+			this.engineOther = Objects.requireNonNull(engineOther);
 		}
 		
 		@Override
 		protected List<EntityView> call() throws Exception {
-			IREngine engineA = IREngines.getLuceneEngineInstance(pathToA);
-			IREngine engineOther = IREngines.getLuceneEngineInstance(pathToOtherSystem);
-			
-			List<String> termVector = engineA.getDocumentTermVector(subname);
+			List<String> termVector = this.engineA.getDocumentTermVector(subname);
 			final AtomicInteger counter = new AtomicInteger(0);
-			return engineOther.moreLikeThis(termVector, query).stream()
+			return this.engineOther.moreLikeThis(termVector, query).stream()
 					.map(res -> new EntityView(counter.incrementAndGet(), res))
 					.collect(Collectors.toList());
 		}

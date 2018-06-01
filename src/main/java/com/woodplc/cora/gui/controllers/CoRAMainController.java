@@ -64,9 +64,9 @@ public class CoRAMainController {
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
 	
-	private final ImmutableModule moduleA = new ImmutableModule();
-	private final ImmutableModule moduleB = new ImmutableModule();
-	private final ImmutableModule moduleC = new ImmutableModule();
+	private final ModuleContainer moduleA = new ModuleContainer();
+	private final ModuleContainer moduleB = new ModuleContainer();
+	private final ModuleContainer moduleC = new ModuleContainer();
 	
 	private final Feature feature = Feature.newBlankFeature();
 	
@@ -133,6 +133,15 @@ public class CoRAMainController {
     @FXML
     private Label systemCBottomLbl;
 
+	private static class ModuleContainer {
+		private Path path;
+		private ImmutableModule module;
+		
+		public Path getPath() {	return path;}
+		public void setPath(Path path) {this.path = path;}
+		public ImmutableModule getModule() {return module;}
+		public void setModule(ImmutableModule module) {	this.module = module;}
+	}
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -161,7 +170,7 @@ public class CoRAMainController {
     }
 
 
-	private void open(ImmutableModule module, String title, TextField txtField, Label label, Label bLabel) {
+	private void open(ModuleContainer module, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
@@ -189,20 +198,20 @@ public class CoRAMainController {
 		parse(moduleC, systemCParseBtn, systemCProgressBar);
     }
 	
-	private void parse(ImmutableModule module, Button parseBtn, ProgressBar progressBar) {
+	private void parse(ModuleContainer module, Button parseBtn, ProgressBar progressBar) {
 		if (module.getPath() != null) {
 			parseBtn.setDisable(true);
 			progressBar.setStyle(ProgressBarColor.BLUE.style);
 			ParseTask pTask = new ParseTask(module.getPath());
 			pTask.setOnSucceeded((event) -> {
-				module.setGraph(pTask.getValue());
+				module.setModule(pTask.getValue());
 				parseBtn.setDisable(false);
 				progressBar.setStyle(ProgressBarColor.GREEN.style);
 			});
 			
 			pTask.setOnFailed((event) -> {
 				pTask.getException().printStackTrace();
-				module.setGraph(Graphs.getSDGraphInstance());
+				module.setModule(null);
 				parseBtn.setDisable(false);
 				progressBar.progressProperty().unbind();
 				progressBar.progressProperty().set(Double.MAX_VALUE);
@@ -219,7 +228,7 @@ public class CoRAMainController {
 		String query = searchTxtFld.getText();
 		if (query == null || query.isEmpty()) { return;}
 		
-		if (moduleA.getGraph() == null) {
+		if (moduleA.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
@@ -227,7 +236,7 @@ public class CoRAMainController {
 		systemASearchBtn.setDisable(true);
 		searchResults.clear();
 
-		SearchTask sTask = new SearchTask(query, moduleA.getPath());
+		SearchTask sTask = new SearchTask(query, moduleA.getModule());
 		sTask.setOnSucceeded((e) -> {
 			searchResults.addAll(sTask.getValue());
 			systemASearchBtn.setDisable(false);
@@ -316,7 +325,7 @@ public class CoRAMainController {
     }
 	
 	private void loadStage(Resource resource, String title, 
-			ImmutableModule module, ObservableList<String> fSubprograms) throws IOException {
+			ModuleContainer module, ObservableList<String> fSubprograms) throws IOException {
 		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
 			multipleSelectionAlert.showAndWait();
 			return;
@@ -325,7 +334,7 @@ public class CoRAMainController {
 		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
-		if (module.getGraph() == null) {
+		if (module.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
@@ -345,7 +354,7 @@ public class CoRAMainController {
 	}
 	
 	private Controller getControllerForResource(Resource resource, String selectedSubprogram,
-			ObservableList<String> fSubprograms, ImmutableModule module) {
+			ObservableList<String> fSubprograms, ModuleContainer module) {
 		switch(resource) {
 		case ADJACENT_FXML:
 		return constructASController(selectedSubprogram, fSubprograms);
@@ -355,8 +364,8 @@ public class CoRAMainController {
 		return new ClonesController(
 				selectedSubprogram,
 				fSubprograms,
-				moduleA.getPath(),
-				module.getPath());
+				moduleA.getModule().getEngine(),
+				module.getModule().getEngine());
 		default:
 			throw new IllegalArgumentException();
 		}
@@ -365,16 +374,16 @@ public class CoRAMainController {
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
-		ObservableList<EntityView> callers = moduleA.getGraph().getSubprogramCallers(selectedSubprogram)
+		ObservableList<EntityView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getGraph().getFanOut(s), s))
+				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<EntityView> callees = moduleA.getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<EntityView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getGraph().getFanIn(s), s))
+				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
@@ -383,7 +392,7 @@ public class CoRAMainController {
 	private VariableControlledController constructVCController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
 		final Set<String> duplicates = new HashSet<>();
-		Map<String, Set<String>> variables = moduleA.getGraph().getVariablesAndCallees(selectedSubprogram)
+		Map<String, Set<String>> variables = moduleA.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
 			.entrySet()
 			.stream()
 			.map(x -> {
@@ -399,7 +408,7 @@ public class CoRAMainController {
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 	
-	static class ParseTask extends Task<SDGraph> {
+	static class ParseTask extends Task<ImmutableModule> {
 		
 		private final Path path;
 
@@ -408,7 +417,7 @@ public class CoRAMainController {
 		}
 		
 		@Override
-		protected SDGraph call() throws Exception {
+		protected ImmutableModule call() throws Exception {
 			IREngine engine = IREngines.getLuceneEngineInstance(path);
 			SDGraph graph = Graphs.getSDGraphInstance();
 			Parser parser = Parsers.indexableFortranParser(engine);
@@ -426,7 +435,7 @@ public class CoRAMainController {
 					updateProgress(++parsedFiles, totalFiles);
 				}
 				engine.save();
-				return graph;
+				return ImmutableModule.nonPersistent(graph, engine);
 		    }
 		}
 		
@@ -435,16 +444,16 @@ public class CoRAMainController {
 	static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;
-		private final Path path;
+		private final ImmutableModule module;
 
-		SearchTask(String query, Path path){ 
+		SearchTask(String query, ImmutableModule module){ 
 			this.query = Objects.requireNonNull(query);
-			this.path = Objects.requireNonNull(path);
+			this.module = Objects.requireNonNull(module);
 		}
 		
 		@Override
 		protected List<EntityView> call() throws Exception {
-			IREngine engine = IREngines.getLuceneEngineInstance(path);
+			IREngine engine = module.getEngine();
 			final AtomicInteger counter = new AtomicInteger(0);
 			return engine.search(query).stream()
 					.map(res -> new EntityView(counter.incrementAndGet(), res))
