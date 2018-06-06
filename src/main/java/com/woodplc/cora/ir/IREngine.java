@@ -1,12 +1,13 @@
 package com.woodplc.cora.ir;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IREngine {
 	
 	List<String> getDocumentTermVector(String subname);
 
-	boolean indexExists();
+	Optional<Boolean> indexExists();
 	
 	void index(String subname, String textData);
 	

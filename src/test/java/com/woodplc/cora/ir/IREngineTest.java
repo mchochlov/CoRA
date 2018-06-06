@@ -55,12 +55,12 @@ class IREngineTest {
 		IREngine engine = IREngines.newReadOnlyInstance(SoftwareSystem.TEST.path());
 		assertNotNull(engine);
 		
-		assertThrows(UnsupportedOperationException.class, () -> {
+		assertThrows(IllegalStateException.class, () -> {
 			Parser parser = Parsers.indexableFortranParser(engine);
 			parseFiles(parser, SoftwareSystem.TEST.path());
         });
 		
-		assertThrows(UnsupportedOperationException.class, () -> {
+		assertThrows(IllegalStateException.class, () -> {
 			engine.save();
 		});
 		

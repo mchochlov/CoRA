@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
@@ -88,7 +89,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	@Override
 	public void index(String subname, String textData) {
 		if (readOnly) {
-			throw new UnsupportedOperationException();
+			throw new IllegalStateException();
 		}
 		
 		if ((subname == null || subname.isEmpty()) ||
@@ -115,7 +116,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	@Override
 	public void save() {
 		if (readOnly) {
-			throw new UnsupportedOperationException();
+			throw new IllegalStateException();
 		}
 		
 		if (writer != null && writer.hasUncommittedChanges()) {
@@ -253,12 +254,12 @@ final class LuceneIREngineWrapper implements IREngine {
 	}
 
 	@Override
-	public boolean indexExists() {
+	public Optional<Boolean> indexExists() {
 		try {
-			return DirectoryReader.indexExists(dir);
+			return Optional.of(DirectoryReader.indexExists(dir));
 		} catch (IOException e) {
 			e.printStackTrace();
-			return false;
+			return Optional.empty();
 		}
 	}
 
