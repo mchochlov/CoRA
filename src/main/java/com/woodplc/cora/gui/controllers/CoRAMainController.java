@@ -1,11 +1,7 @@
 package com.woodplc.cora.gui.controllers;
 
-import static java.util.stream.Collectors.toSet;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,19 +11,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Feature;
-import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ImmutableModule;
-import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
-import com.woodplc.cora.ir.IREngines;
-import com.woodplc.cora.parser.Parser;
-import com.woodplc.cora.parser.Parsers;
+import com.woodplc.cora.storage.Repositories;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -199,25 +190,39 @@ public class CoRAMainController {
     }
 	
 	private void parse(ModuleContainer module, Button parseBtn, ProgressBar progressBar) {
-		if (module.getPath() != null) {
+		Path path = module.getPath();
+		if (path != null) {
 			parseBtn.setDisable(true);
 			progressBar.setStyle(ProgressBarColor.BLUE.style);
-			ParseTask pTask = new ParseTask(module.getPath());
-			pTask.setOnSucceeded((event) -> {
-				module.setModule(pTask.getValue());
-				parseBtn.setDisable(false);
-				progressBar.setStyle(ProgressBarColor.GREEN.style);
-			});
 			
-			pTask.setOnFailed((event) -> {
-				pTask.getException().printStackTrace();
-				module.setModule(null);
-				parseBtn.setDisable(false);
-				progressBar.progressProperty().unbind();
-				progressBar.progressProperty().set(Double.MAX_VALUE);
-				progressBar.setStyle(ProgressBarColor.RED.style);
-			});
-			
+			Task<ImmutableModule> pTask = new Task<ImmutableModule>() {
+
+				@Override
+				protected ImmutableModule call() throws Exception {
+					String checkSum = Repositories.checkSumForPath(path);
+					return Repositories.getInstance().retrieve(checkSum, path, this::updateProgress);
+				}
+
+				@Override
+				protected void failed() {
+					getException().printStackTrace();
+					updateState(null, ProgressBarColor.RED);
+				}
+
+				@Override
+				protected void succeeded() {
+					updateState(getValue(), ProgressBarColor.GREEN);
+				}
+				
+				private void updateState(ImmutableModule im, ProgressBarColor color) {
+					module.setModule(im);
+					parseBtn.setDisable(false);
+					progressBar.progressProperty().unbind();
+					progressBar.progressProperty().set(Double.MAX_VALUE);
+					progressBar.setStyle(color.style);
+				}			
+			};
+
 			progressBar.progressProperty().bind(pTask.progressProperty());
 			new Thread(pTask).start();
 		}
@@ -407,40 +412,7 @@ public class CoRAMainController {
 		
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
-	
-	static class ParseTask extends Task<ImmutableModule> {
 		
-		private final Path path;
-
-		ParseTask(Path path){
-			this.path = Objects.requireNonNull(path);
-		}
-		
-		@Override
-		protected ImmutableModule call() throws Exception {
-			IREngine engine = IREngines.newWriteableInstance(path);
-			SDGraph graph = Graphs.getSDGraphInstance();
-			Parser parser = Parsers.indexableFortranParser(engine);
-			try (DirectoryStream<Path> stream = Files.newDirectoryStream(
-					path, Parsers.fortranFileExtensions()
-					)
-				) 
-			{
-				long totalFiles = 0, parsedFiles = 0;
-				Set<Path> paths = StreamSupport.stream(stream.spliterator(), false).collect(toSet());
-				totalFiles = paths.size();
-				
-				for (Path entry: paths) {
-					graph.merge(parser.parse(entry));
-					updateProgress(++parsedFiles, totalFiles);
-				}
-				engine.save();
-				return ImmutableModule.nonPersistent(graph, engine);
-		    }
-		}
-		
-	}
-	
 	static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;

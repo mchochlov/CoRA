@@ -1,11 +1,11 @@
 package com.woodplc.cora.utils;
 
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
@@ -34,14 +34,11 @@ public final class TestUtils {
 		Objects.requireNonNull(path);
 		SDGraph graph = Graphs.getSDGraphInstance();
 		Objects.requireNonNull(graph);
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(
-				path, Parsers.fortranFileExtensions()
-				)
-			) 
+		try (Stream<Path> stream = Files.walk(path)) 
 		{
-			for (Path entry: stream) {
-				graph.merge(parser.parse(entry));
-			}
+			stream
+				.filter(Parsers::isFortranFile)
+				.forEach(p -> graph.merge(parser.parse(p)));
 			return graph;
 	    }
 	}
