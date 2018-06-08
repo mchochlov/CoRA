@@ -124,7 +124,7 @@ final class FSRepository implements Repository {
 		Objects.requireNonNull(consumer);
 		
 		IREngine engine = IREngines.newWriteableInstance(Repositories.pathForCheckSum(checkSum));
-		SDGraph graph = Graphs.getSDGraphInstance();
+		SDGraph graph = Graphs.newInstance();
 		Parser parser = Parsers.indexableFortranParser(engine);
 		try (Stream<Path> stream = Files.walk(path)) 
 		{

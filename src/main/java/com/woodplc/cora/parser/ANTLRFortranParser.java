@@ -87,7 +87,7 @@ class ANTLRFortranParser implements Parser {
 		private final CharStream charStream;
 		private final Path fname;
 		private final IREngine engine;
-		private final SDGraph graph = Graphs.getSDGraphInstance();
+		private final SDGraph graph = Graphs.newInstance();
 		private final Set<String> localCallees = new HashSet<>();
 
 		private FuzzyListener(Path fname, IREngine engine, CharStream charStream){
