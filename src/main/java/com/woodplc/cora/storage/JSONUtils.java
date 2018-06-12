@@ -49,7 +49,11 @@ public final class JSONUtils {
 	private JSONUtils() {}
 
 	public static SDGraph graphFromJson(Path entryPath) throws IOException {
+		Objects.requireNonNull(entryPath);
+		Path graphFilePath = Paths.get(entryPath.toString(), SDGRAPH_JSON_FILENAME);
 		
+		if (!Files.exists(graphFilePath)) throw new IllegalArgumentException();
+		return SDGRAPH_TO_GSON.fromJson(Files.newBufferedReader(graphFilePath), SDGraph.class);
 	}
 
 	public static void graphToJson(Path entryPath, SDGraph graph) throws IOException {
@@ -65,6 +69,139 @@ public final class JSONUtils {
 	}
 
 	private static class GraphAdapter extends TypeAdapter<SDGraph> {
+
+		@Override
+		public SDGraph read(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			
+			reader.beginObject();
+			Map<String, Collection<SubProgram>> subprograms = readSubprograms(reader);
+			Set<String> nodes = readNodes(reader);
+			Set<CallEdge> edges = readEdges(reader);
+			Map<String, Collection<String>> variables = readVariables(reader);
+			reader.endObject();
+			
+			return Graphs.newInstanceFromValues(subprograms, nodes, edges, variables);
+		}
+
+		private Map<String, Collection<SubProgram>> readSubprograms(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			
+			Map<String, Collection<SubProgram>> subprograms = new HashMap<>();
+			reader.nextName();
+			reader.beginArray();
+			while(reader.hasNext()) {
+				reader.beginObject();
+				String key = reader.nextName();
+				reader.beginArray();
+				Collection<SubProgram> collection = new HashSet<>();
+				while(reader.hasNext()) {
+					reader.beginObject();
+					String subname = null;
+					int startLine = 0, endLine = 0;
+					Path path = null;
+				    while (reader.hasNext()) {
+				    	String name = reader.nextName();
+				    	if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
+				    		subname = reader.nextString();
+				    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
+				    		startLine = reader.nextInt();
+				    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
+				    		endLine = reader.nextInt();
+				    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
+				    		path = Paths.get(reader.nextString());
+				    	} else {
+				    		reader.skipValue();
+				    	}
+				    }
+				    reader.endObject();
+				    collection.add(new SubProgram(subname, startLine, endLine, path));
+				}
+				reader.endArray();
+				reader.endObject();
+				subprograms.put(key, collection);
+			}
+			reader.endArray();
+			
+			return subprograms;
+		}
+
+		private Set<String> readNodes(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			
+			Set<String> nodes = new HashSet<>();
+			reader.nextName();
+			reader.beginArray();
+			while(reader.hasNext()) {
+				nodes.add(reader.nextString());
+			}
+			reader.endArray();
+			return nodes;
+		}
+
+		private Set<CallEdge> readEdges(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			
+			Set<CallEdge> edges = new HashSet<>();
+			reader.nextName();
+			reader.beginArray();
+			while(reader.hasNext()) {
+				reader.beginObject();
+				String source = null, target = null;
+			    while (reader.hasNext()) {
+			    	String name = reader.nextName();
+			    	if (name.equals(JsonFieldNames.SOURCE.fieldName)) {
+			    		source = reader.nextString();
+			    	} else if (name.equals(JsonFieldNames.TARGET.fieldName)) {
+			    		target = reader.nextString();
+			    	} else {
+			    		reader.skipValue();
+			    	}
+			    }
+			    reader.endObject();
+			    edges.add(new CallEdge(source, target));
+			}
+			reader.endArray();
+			return edges;
+		}
+
+		private Map<String, Collection<String>> readVariables(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			
+			Map<String, Collection<String>> variables = new HashMap<>();
+			reader.nextName();
+			reader.beginArray();
+			while(reader.hasNext()) {
+				reader.beginObject();
+				String key = reader.nextName();
+				reader.beginArray();
+				Collection<String> collection = new HashSet<>();
+				while(reader.hasNext()) {
+				    collection.add(reader.nextString());
+				}
+				reader.endArray();
+				reader.endObject();
+				variables.put(key, collection);
+			}
+			reader.endArray();
+			
+			return variables;
+		}
 
 		@Override
 		public void write(JsonWriter writer, SDGraph graph) throws IOException {
