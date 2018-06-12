@@ -16,7 +16,7 @@ public interface SDGraph {
 	
 	Set<CallEdge> edges();
 	
-	Set<SubProgram> getSubprograms();
+	Set<SubProgram> subprograms();
 	
 	int getFanIn(String subName);
 	
@@ -35,8 +35,6 @@ public interface SDGraph {
 	Set<String> nodes();
 
 	Map<String, Collection<String>> variables();
-	
-	Map<String, Collection<SubProgram>> subprograms();
 	
 	Map<String, Set<String>> getVariablesAndCallees(String subname);
 }

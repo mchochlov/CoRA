@@ -12,9 +12,10 @@ public final class Graphs {
 		return new GuavaBasedSDGraph();
 	}
 
-	public static SDGraph newInstanceFromValues(Map<String, Collection<SubProgram>> subprograms, Set<String> nodes,
-			Set<CallEdge> edges, Map<String, Collection<String>> variables) {
-		return new GuavaBasedSDGraph(subprograms, nodes, edges, variables);
+	public static SDGraph newInstanceFromValues(Set<SubProgram> subprograms,
+			Set<CallEdge> edges, 
+			Map<String, Collection<String>> variables) {
+		return new GuavaBasedSDGraph(subprograms, edges, variables);
 	}
 	
 }

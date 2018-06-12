@@ -37,7 +37,6 @@ public final class JSONUtils {
 		SOURCE("u"),
 		TARGET("v"),
 		SUBPROGRAMS("subprograms"),
-		NODES("nodes"),
 		EDGES("edges"),
 		VARIABLES("variables");
 		
@@ -78,74 +77,48 @@ public final class JSONUtils {
 		    }
 			
 			reader.beginObject();
-			Map<String, Collection<SubProgram>> subprograms = readSubprograms(reader);
-			Set<String> nodes = readNodes(reader);
+			Set<SubProgram> subprograms = readSubprograms(reader);
 			Set<CallEdge> edges = readEdges(reader);
-			Map<String, Collection<String>> variables = readVariables(reader);
+			Map<String, Collection<String>> variables = writeVariables(reader);
 			reader.endObject();
 			
-			return Graphs.newInstanceFromValues(subprograms, nodes, edges, variables);
+			return Graphs.newInstanceFromValues(subprograms, edges, variables);
 		}
 
-		private Map<String, Collection<SubProgram>> readSubprograms(JsonReader reader) throws IOException {
+		private Set<SubProgram> readSubprograms(JsonReader reader) throws IOException {
 			if (reader.peek() == JsonToken.NULL) {
 		        reader.nextNull();
 		        return null;
 		    }
 			
-			Map<String, Collection<SubProgram>> subprograms = new HashMap<>();
+			Set<SubProgram> subprograms = new HashSet<>();
 			reader.nextName();
 			reader.beginArray();
 			while(reader.hasNext()) {
 				reader.beginObject();
-				String key = reader.nextName();
-				reader.beginArray();
-				Collection<SubProgram> collection = new HashSet<>();
-				while(reader.hasNext()) {
-					reader.beginObject();
-					String subname = null;
-					int startLine = 0, endLine = 0;
-					Path path = null;
-				    while (reader.hasNext()) {
-				    	String name = reader.nextName();
-				    	if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
-				    		subname = reader.nextString();
-				    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
-				    		startLine = reader.nextInt();
-				    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
-				    		endLine = reader.nextInt();
-				    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
-				    		path = Paths.get(reader.nextString());
-				    	} else {
-				    		reader.skipValue();
-				    	}
-				    }
-				    reader.endObject();
-				    collection.add(new SubProgram(subname, startLine, endLine, path));
-				}
-				reader.endArray();
-				reader.endObject();
-				subprograms.put(key, collection);
+				String subname = null;
+				int startLine = 0, endLine = 0;
+				Path path = null;
+			    while (reader.hasNext()) {
+			    	String name = reader.nextName();
+			    	if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
+			    		subname = reader.nextString();
+			    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
+			    		startLine = reader.nextInt();
+			    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
+			    		endLine = reader.nextInt();
+			    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
+			    		path = Paths.get(reader.nextString());
+			    	} else {
+			    		reader.skipValue();
+			    	}
+			    }
+			    reader.endObject();
+			    subprograms.add(new SubProgram(subname, startLine, endLine, path));				 
 			}
 			reader.endArray();
 			
 			return subprograms;
-		}
-
-		private Set<String> readNodes(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			
-			Set<String> nodes = new HashSet<>();
-			reader.nextName();
-			reader.beginArray();
-			while(reader.hasNext()) {
-				nodes.add(reader.nextString());
-			}
-			reader.endArray();
-			return nodes;
 		}
 
 		private Set<CallEdge> readEdges(JsonReader reader) throws IOException {
@@ -177,7 +150,7 @@ public final class JSONUtils {
 			return edges;
 		}
 
-		private Map<String, Collection<String>> readVariables(JsonReader reader) throws IOException {
+		private Map<String, Collection<String>> writeVariables(JsonReader reader) throws IOException {
 			if (reader.peek() == JsonToken.NULL) {
 		        reader.nextNull();
 		        return null;
@@ -212,13 +185,12 @@ public final class JSONUtils {
 
 			writer.beginObject();
 			writeSubprograms(writer, graph.subprograms());
-			writeNodes(writer, graph.nodes());
 			writeEdges(writer, graph.edges());
 			writeVariables(writer, graph.variables());
 			writer.endObject();
 		}
 
-		private void writeSubprograms(JsonWriter writer, Map<String, Collection<SubProgram>> subprograms)
+		private void writeSubprograms(JsonWriter writer, Set<SubProgram> subprograms)
 				throws IOException {
 			if (subprograms == null) {
 				writer.nullValue();
@@ -226,34 +198,16 @@ public final class JSONUtils {
 			}
 			writer.name(JsonFieldNames.SUBPROGRAMS.fieldName);
 			writer.beginArray();
-			for (Map.Entry<String, Collection<SubProgram>> entry : subprograms.entrySet()) {
+			
+			for (SubProgram subprogram : subprograms) {
 				writer.beginObject();
-				writer.name(entry.getKey());
-				writer.beginArray();
-				for (SubProgram subprogram : entry.getValue()) {
-					writer.beginObject();
-					writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
-					writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
-					writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
-					writer.name(JsonFieldNames.PATH.fieldName).value(subprogram.path().toString());
-					writer.endObject();
-				}
-				writer.endArray();
+				writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
+				writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
+				writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
+				writer.name(JsonFieldNames.PATH.fieldName).value(subprogram.path().toString());
 				writer.endObject();
 			}
-			writer.endArray();
-		}
-
-		private void writeNodes(JsonWriter writer, Set<String> nodes) throws IOException {
-			if (nodes == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.name(JsonFieldNames.NODES.fieldName);
-			writer.beginArray();
-			for (String node : nodes) {
-				writer.value(node);
-			}
+			
 			writer.endArray();
 		}
 
