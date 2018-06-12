@@ -1,5 +1,9 @@
 package com.woodplc.cora.data;
 
+import static java.util.stream.Collectors.toSet;
+
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
@@ -12,27 +16,36 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 
-class GuavaBasedSDGraph implements SDGraph {
+final class GuavaBasedSDGraph implements SDGraph {
+		
+	private final SetMultimap<String, SubProgram> subprograms = SetMultimapBuilder
+			.hashKeys()
+			.hashSetValues()
+			.build();
+	private final MutableGraph<String> subprogramCallGraph = GraphBuilder
+			.directed()
+			.allowsSelfLoops(true)
+			.build();
+	private final SetMultimap<String, String> variableCallees = SetMultimapBuilder
+			.hashKeys()
+			.hashSetValues()
+			.build();
 	
-	private final SetMultimap<String, SubProgram> subprograms;
-	private final MutableGraph<String> subprogramCallGraph;
-	private final SetMultimap<String, String> variableCallees;
+	GuavaBasedSDGraph() {}
 	
-	GuavaBasedSDGraph() {
-		subprograms = SetMultimapBuilder
-				.hashKeys()
-				.hashSetValues()
-				.build();
-		subprogramCallGraph = GraphBuilder
-				.directed()
-				.allowsSelfLoops(true)
-				.build();
-		variableCallees = SetMultimapBuilder
-				.hashKeys()
-				.hashSetValues()
-				.build();
+	GuavaBasedSDGraph(Map<String, Collection<SubProgram>> subprograms, Set<String> nodes, Set<CallEdge> edges,
+			Map<String, Collection<String>> variables) {
+		Objects.requireNonNull(subprograms);
+		Objects.requireNonNull(nodes);
+		Objects.requireNonNull(edges);
+		Objects.requireNonNull(variables);
+		
+		subprograms.forEach(this.subprograms::putAll);
+		nodes.forEach(subprogramCallGraph::addNode);
+		edges.forEach(edge -> subprogramCallGraph.putEdge(edge.source(), edge.target()));
+		variables.forEach(variableCallees::putAll);
 	}
-	
+
 	@Override
 	public void addVariablesAndCallees(Set<String> variables, Set<String> callees) {
 		Objects.requireNonNull(variables);
@@ -106,6 +119,8 @@ class GuavaBasedSDGraph implements SDGraph {
 		
 		GuavaBasedSDGraph g = (GuavaBasedSDGraph) graph;
 		
+		if (g.isEmpty() || g.equals(this)) return;
+		
 		g.subprogramCallGraph.nodes().forEach(x -> {
 			this.subprogramCallGraph.addNode(x);
 		});
@@ -126,4 +141,50 @@ class GuavaBasedSDGraph implements SDGraph {
 				.collect(Collectors.toMap(Map.Entry::getKey, e -> new HashSet<>(e.getValue())));
 	}
 
+	@Override
+	public boolean isEmpty() {
+		return subprograms.isEmpty() 
+				&& subprogramCallGraph.nodes().isEmpty() 
+				&& variableCallees.isEmpty();
+	}
+
+	@Override
+	public Set<CallEdge> edges() {
+		return subprogramCallGraph.edges()
+				.stream()
+				.map(pair -> new CallEdge(pair.source(), pair.target()))
+				.collect(toSet());
+	}
+
+	@Override
+	public Set<String> nodes() {
+		return new HashSet<>(subprogramCallGraph.nodes());
+	}
+
+	@Override
+	public Map<String, Collection<String>> variables() {
+		return new HashMap<>(variableCallees.asMap());
+	}
+
+	@Override
+	public Map<String, Collection<SubProgram>> subprograms() {
+		return new HashMap<>(subprograms.asMap());
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof GuavaBasedSDGraph)) return false;
+		
+		GuavaBasedSDGraph g = (GuavaBasedSDGraph) o;
+		
+		return this.subprograms.equals(g.subprograms)
+				&& this.subprogramCallGraph.equals(g.subprogramCallGraph)
+				&& this.variableCallees.equals(g.variableCallees);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.subprograms, this.subprogramCallGraph, this.variableCallees);
+	}
 }
