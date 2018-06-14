@@ -38,19 +38,19 @@ public class Main extends Application {
 	private final static ResourceBundle resources = ResourceBundle.getBundle(Resource.TEXT.path);
 	private CoRAMainController mainController = null;
 	
-	
 	@Override
 	public void start(Stage primaryStage) {
-		if (JSONUtils.stateFileExists()) {
-			Alert alert = new Alert(AlertType.CONFIRMATION, Main.getResources().getString("restore_question"));
-			Optional<ButtonType> result = alert.showAndWait();
-			if (result.isPresent() && result.get() == ButtonType.OK) {
-				mainController = new CoRAMainController(JSONUtils.stateFromJson());
-			} 
-		}
-		if (mainController == null) mainController = new CoRAMainController();
-		
 		try {
+			if (JSONUtils.stateFileExists()) {
+				Alert alert = new Alert(AlertType.CONFIRMATION, Main.getResources().getString("restore_question"),
+						ButtonType.YES, ButtonType.NO);
+				Optional<ButtonType> result = alert.showAndWait();
+				if (result.isPresent() && result.get() == ButtonType.YES) {
+					mainController = new CoRAMainController(JSONUtils.stateFromJson());
+				} 
+			}
+			if (mainController == null) mainController = new CoRAMainController();
+			
 			FXMLLoader loader = new FXMLLoader(getClass().getResource(Resource.MAIN_FXML.path), resources);
 			loader.setController(mainController);
 			primaryStage.setTitle(resources.getString("cora_main_title"));
