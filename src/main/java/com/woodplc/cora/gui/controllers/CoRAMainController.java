@@ -1,11 +1,7 @@
 package com.woodplc.cora.gui.controllers;
 
-import static java.util.stream.Collectors.toSet;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,19 +11,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.Feature;
-import com.woodplc.cora.data.Graphs;
-import com.woodplc.cora.data.MutableModule;
-import com.woodplc.cora.data.SDGraph;
+import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
-import com.woodplc.cora.ir.IREngines;
-import com.woodplc.cora.parser.Parser;
-import com.woodplc.cora.parser.Parsers;
+import com.woodplc.cora.storage.Repositories;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -64,9 +55,9 @@ public class CoRAMainController {
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
 	
-	private final MutableModule moduleA = new MutableModule();
-	private final MutableModule moduleB = new MutableModule();
-	private final MutableModule moduleC = new MutableModule();
+	private final ModuleContainer moduleA = new ModuleContainer();
+	private final ModuleContainer moduleB = new ModuleContainer();
+	private final ModuleContainer moduleC = new ModuleContainer();
 	
 	private final Feature feature = Feature.newBlankFeature();
 	
@@ -133,6 +124,15 @@ public class CoRAMainController {
     @FXML
     private Label systemCBottomLbl;
 
+	private static class ModuleContainer {
+		private Path path;
+		private ImmutableModule module;
+		
+		public Path getPath() {	return path;}
+		public void setPath(Path path) {this.path = path;}
+		public ImmutableModule getModule() {return module;}
+		public void setModule(ImmutableModule module) {	this.module = module;}
+	}
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -161,7 +161,7 @@ public class CoRAMainController {
     }
 
 
-	private void open(MutableModule module, String title, TextField txtField, Label label, Label bLabel) {
+	private void open(ModuleContainer module, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
@@ -189,26 +189,40 @@ public class CoRAMainController {
 		parse(moduleC, systemCParseBtn, systemCProgressBar);
     }
 	
-	private void parse(MutableModule module, Button parseBtn, ProgressBar progressBar) {
-		if (module.getPath() != null) {
+	private void parse(ModuleContainer module, Button parseBtn, ProgressBar progressBar) {
+		Path path = module.getPath();
+		if (path != null) {
 			parseBtn.setDisable(true);
 			progressBar.setStyle(ProgressBarColor.BLUE.style);
-			ParseTask pTask = new ParseTask(module.getPath());
-			pTask.setOnSucceeded((event) -> {
-				module.setGraph(pTask.getValue());
-				parseBtn.setDisable(false);
-				progressBar.setStyle(ProgressBarColor.GREEN.style);
-			});
 			
-			pTask.setOnFailed((event) -> {
-				pTask.getException().printStackTrace();
-				module.setGraph(Graphs.getSDGraphInstance());
-				parseBtn.setDisable(false);
-				progressBar.progressProperty().unbind();
-				progressBar.progressProperty().set(Double.MAX_VALUE);
-				progressBar.setStyle(ProgressBarColor.RED.style);
-			});
-			
+			Task<ImmutableModule> pTask = new Task<ImmutableModule>() {
+
+				@Override
+				protected ImmutableModule call() throws Exception {
+					String checkSum = Repositories.checkSumForPath(path);
+					return Repositories.getInstance().retrieve(checkSum, path, this::updateProgress);
+				}
+
+				@Override
+				protected void failed() {
+					getException().printStackTrace();
+					updateState(null, ProgressBarColor.RED);
+				}
+
+				@Override
+				protected void succeeded() {
+					updateState(getValue(), ProgressBarColor.GREEN);
+				}
+				
+				private void updateState(ImmutableModule im, ProgressBarColor color) {
+					module.setModule(im);
+					parseBtn.setDisable(false);
+					progressBar.progressProperty().unbind();
+					progressBar.progressProperty().set(Double.MAX_VALUE);
+					progressBar.setStyle(color.style);
+				}			
+			};
+
 			progressBar.progressProperty().bind(pTask.progressProperty());
 			new Thread(pTask).start();
 		}
@@ -219,7 +233,7 @@ public class CoRAMainController {
 		String query = searchTxtFld.getText();
 		if (query == null || query.isEmpty()) { return;}
 		
-		if (moduleA.getGraph() == null) {
+		if (moduleA.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
@@ -227,7 +241,7 @@ public class CoRAMainController {
 		systemASearchBtn.setDisable(true);
 		searchResults.clear();
 
-		SearchTask sTask = new SearchTask(query, moduleA.getPath());
+		SearchTask sTask = new SearchTask(query, moduleA.getModule());
 		sTask.setOnSucceeded((e) -> {
 			searchResults.addAll(sTask.getValue());
 			systemASearchBtn.setDisable(false);
@@ -316,7 +330,7 @@ public class CoRAMainController {
     }
 	
 	private void loadStage(Resource resource, String title, 
-			MutableModule module, ObservableList<String> fSubprograms) throws IOException {
+			ModuleContainer module, ObservableList<String> fSubprograms) throws IOException {
 		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
 			multipleSelectionAlert.showAndWait();
 			return;
@@ -325,7 +339,7 @@ public class CoRAMainController {
 		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
-		if (module.getGraph() == null) {
+		if (module.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
@@ -345,7 +359,7 @@ public class CoRAMainController {
 	}
 	
 	private Controller getControllerForResource(Resource resource, String selectedSubprogram,
-			ObservableList<String> fSubprograms, MutableModule module) {
+			ObservableList<String> fSubprograms, ModuleContainer module) {
 		switch(resource) {
 		case ADJACENT_FXML:
 		return constructASController(selectedSubprogram, fSubprograms);
@@ -355,8 +369,8 @@ public class CoRAMainController {
 		return new ClonesController(
 				selectedSubprogram,
 				fSubprograms,
-				moduleA.getPath(),
-				module.getPath());
+				moduleA.getModule().getEngine(),
+				module.getModule().getEngine());
 		default:
 			throw new IllegalArgumentException();
 		}
@@ -365,16 +379,16 @@ public class CoRAMainController {
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
-		ObservableList<EntityView> callers = moduleA.getGraph().getSubprogramCallers(selectedSubprogram)
+		ObservableList<EntityView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getGraph().getFanOut(s), s))
+				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<EntityView> callees = moduleA.getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<EntityView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getGraph().getFanIn(s), s))
+				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
@@ -383,7 +397,7 @@ public class CoRAMainController {
 	private VariableControlledController constructVCController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
 		final Set<String> duplicates = new HashSet<>();
-		Map<String, Set<String>> variables = moduleA.getGraph().getVariablesAndCallees(selectedSubprogram)
+		Map<String, Set<String>> variables = moduleA.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
 			.entrySet()
 			.stream()
 			.map(x -> {
@@ -398,53 +412,20 @@ public class CoRAMainController {
 		
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
-	
-	static class ParseTask extends Task<SDGraph> {
 		
-		private final Path path;
-
-		ParseTask(Path path){
-			this.path = Objects.requireNonNull(path);
-		}
-		
-		@Override
-		protected SDGraph call() throws Exception {
-			IREngine engine = IREngines.getLuceneEngineInstance(path);
-			SDGraph graph = Graphs.getSDGraphInstance();
-			Parser parser = Parsers.indexableFortranParser(engine);
-			try (DirectoryStream<Path> stream = Files.newDirectoryStream(
-					path, Parsers.fortranFileExtensions()
-					)
-				) 
-			{
-				long totalFiles = 0, parsedFiles = 0;
-				Set<Path> paths = StreamSupport.stream(stream.spliterator(), false).collect(toSet());
-				totalFiles = paths.size();
-				
-				for (Path entry: paths) {
-					graph.merge(parser.parse(entry));
-					updateProgress(++parsedFiles, totalFiles);
-				}
-				engine.save();
-				return graph;
-		    }
-		}
-		
-	}
-	
 	static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;
-		private final Path path;
+		private final ImmutableModule module;
 
-		SearchTask(String query, Path path){ 
+		SearchTask(String query, ImmutableModule module){ 
 			this.query = Objects.requireNonNull(query);
-			this.path = Objects.requireNonNull(path);
+			this.module = Objects.requireNonNull(module);
 		}
 		
 		@Override
 		protected List<EntityView> call() throws Exception {
-			IREngine engine = IREngines.getLuceneEngineInstance(path);
+			IREngine engine = module.getEngine();
 			final AtomicInteger counter = new AtomicInteger(0);
 			return engine.search(query).stream()
 					.map(res -> new EntityView(counter.incrementAndGet(), res))

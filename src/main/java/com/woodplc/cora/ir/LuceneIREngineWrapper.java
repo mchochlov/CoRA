@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.custom.CustomAnalyzer;
@@ -14,6 +15,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.FieldType;
 import org.apache.lucene.document.StringField;
+import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexOptions;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -42,17 +44,20 @@ final class LuceneIREngineWrapper implements IREngine {
 	private final static int MAX_HITS = Integer.MAX_VALUE;
 	private final Path indexPath;
 	private final Analyzer fortranAnalyzer;
+	private final Directory dir;
 	private final IndexWriter writer;
 	private final SearcherManager searchManager;
 	private final QueryParser dataFieldQueryParser;
+	private final boolean readOnly;
 	
 	private enum Fields{
 		NAME,
 		DATA;
 	}
 
-	public LuceneIREngineWrapper(Path path) {
-		this.indexPath = Paths.get(INDEX_ROOT, Objects.requireNonNull(path).getFileName().toString());
+	public LuceneIREngineWrapper(Path path, boolean readOnly) {
+		this.indexPath = Paths.get(Objects.requireNonNull(path).toString(), INDEX_ROOT);
+		this.readOnly = readOnly;
 		
 		try {
 			this.fortranAnalyzer = CustomAnalyzer.builder()
@@ -64,10 +69,16 @@ final class LuceneIREngineWrapper implements IREngine {
 					//.addTokenFilter("length", "min", "3", "max", "255")
 					.build();
 			
-			Directory dir = FSDirectory.open(indexPath);
-			IndexWriterConfig iwc = new IndexWriterConfig(fortranAnalyzer).setOpenMode(OpenMode.CREATE);
-			this.writer = new IndexWriter(dir, iwc);
-			this.searchManager = new SearcherManager(writer, true, true, null);
+			this.dir = FSDirectory.open(indexPath);
+			
+			if (readOnly) {
+				this.writer = null;
+				this.searchManager = new SearcherManager(dir, null);
+			} else {
+				IndexWriterConfig iwc = new IndexWriterConfig(fortranAnalyzer).setOpenMode(OpenMode.CREATE);
+				this.writer = new IndexWriter(dir, iwc);
+				this.searchManager = new SearcherManager(writer, true, true, null);
+			}
 			this.dataFieldQueryParser = new QueryParser(Fields.DATA.name(), fortranAnalyzer);
 
 		} catch (IOException e) {
@@ -77,6 +88,10 @@ final class LuceneIREngineWrapper implements IREngine {
 
 	@Override
 	public void index(String subname, String textData) {
+		if (readOnly) {
+			throw new IllegalStateException();
+		}
+		
 		if ((subname == null || subname.isEmpty()) ||
 				textData == null || textData.isEmpty()) {
 			throw new IllegalArgumentException();
@@ -100,6 +115,10 @@ final class LuceneIREngineWrapper implements IREngine {
 	
 	@Override
 	public void save() {
+		if (readOnly) {
+			throw new IllegalStateException();
+		}
+		
 		if (writer != null && writer.hasUncommittedChanges()) {
 			try {
 				writer.commit();
@@ -231,6 +250,16 @@ final class LuceneIREngineWrapper implements IREngine {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+
+	@Override
+	public Optional<Boolean> indexExists() {
+		try {
+			return Optional.of(DirectoryReader.indexExists(dir));
+		} catch (IOException e) {
+			e.printStackTrace();
+			return Optional.empty();
 		}
 	}
 

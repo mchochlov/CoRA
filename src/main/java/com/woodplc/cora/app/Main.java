@@ -2,11 +2,13 @@ package com.woodplc.cora.app;
 	
 import java.util.ResourceBundle;
 
-import com.woodplc.cora.ir.IREngines;
+import com.woodplc.cora.storage.Repositories;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 
@@ -57,7 +59,10 @@ public class Main extends Application {
 	@Override
 	public void stop() throws Exception {
 		super.stop();
-		IREngines.closeAll();
+		Alert alert = new Alert(AlertType.NONE, Main.getResources().getString("sync_alert"));
+		alert.show();
+		Repositories.getInstance().closeAndSync();
+		alert.close();
 	}
 
 }
