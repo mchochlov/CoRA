@@ -32,7 +32,7 @@ public final class TestUtils {
 	public static SDGraph parseFiles(Parser parser, Path path) throws IOException {
 		Objects.requireNonNull(parser);
 		Objects.requireNonNull(path);
-		SDGraph graph = Graphs.getSDGraphInstance();
+		SDGraph graph = Graphs.newInstance();
 		Objects.requireNonNull(graph);
 		try (Stream<Path> stream = Files.walk(path)) 
 		{

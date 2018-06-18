@@ -44,7 +44,7 @@ class ParserTest {
 		Parser parser = Parsers.indexableFortranParser(engine);
 		SDGraph graph = parseFiles(parser, SoftwareSystem.TEST.path());
 		assertNotNull(graph);
-		Set<SubProgram> testSetOfSubprograms = graph.getSubprograms();
+		Set<SubProgram> testSetOfSubprograms = graph.subprograms();
 		
 		verify(engine, times(testSetOfSubprograms.size())).index(Mockito.anyString(), Mockito.anyString());
 		assertTrue(testSetOfSubprograms.containsAll(correctSubsetOfSubPrograms));		
