@@ -14,8 +14,10 @@ import java.util.stream.Collectors;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
+import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.ImmutableModule;
+import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.Repositories;
@@ -47,7 +49,9 @@ import javafx.stage.Stage;
 
 public class CoRAMainController {
 		
+	private static final double DOUBLE_ZERO = 0;
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
+	private String lastSearchQuery = null;
 	private File lastKnownDir = null;
 	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
 	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
@@ -55,11 +59,11 @@ public class CoRAMainController {
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
 	
-	private final ModuleContainer moduleA = new ModuleContainer();
-	private final ModuleContainer moduleB = new ModuleContainer();
-	private final ModuleContainer moduleC = new ModuleContainer();
+	private ModuleContainer moduleA = ModuleContainer.empty();
+	private ModuleContainer moduleB = ModuleContainer.empty();
+	private ModuleContainer moduleC = ModuleContainer.empty();
 	
-	private final Feature feature = Feature.newBlankFeature();
+	private Feature feature = new Feature();
 	
 	@FXML
 	private Label systemALbl;
@@ -123,51 +127,104 @@ public class CoRAMainController {
     private Label systemBBottomLbl;
     @FXML
     private Label systemCBottomLbl;
-
-	private static class ModuleContainer {
-		private Path path;
-		private ImmutableModule module;
-		
-		public Path getPath() {	return path;}
-		public void setPath(Path path) {this.path = path;}
-		public ImmutableModule getModule() {return module;}
-		public void setModule(ImmutableModule module) {	this.module = module;}
-	}
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
 		RED("-fx-accent: red"),
 		GREEN("-fx-accent: green");
-		
-		
+			
 		private final String style;
 		
 		private ProgressBarColor(String style) {this.style = style;}
 	}
 
+	public CoRAMainController() {}
+
+	public CoRAMainController(ApplicationState state) {
+		Objects.requireNonNull(state);
+		this.lastKnownDir = state.getLastKnownDir() == null ? null : new File(state.getLastKnownDir());
+		this.lastSearchQuery = state.getSearchQuery();
+		this.searchResults.addAll(state.getSearchResults());
+		this.moduleA = state.getModuleA();
+		this.moduleB = state.getModuleB();
+		this.moduleC = state.getModuleC();
+		this.feature = state.getFeature();
+		filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
+	}
+
+	@FXML
+	void initialize() {
+		initializeModule(moduleA, systemADirFld, systemALbl, systemABottomLbl, systemAParseBtn, systemAProgressBar);
+		initializeModule(moduleB, systemBDirFld, systemBLbl, systemBBottomLbl, systemBParseBtn, systemBProgressBar);
+		initializeModule(moduleC, systemCDirFld, systemCLbl, systemCBottomLbl, systemCParseBtn, systemCProgressBar);
+		
+		searchTxtFld.setText(lastSearchQuery);
+		
+		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
+			while(x.next()) {
+				if (x.wasAdded() || x.wasRemoved()) {
+					filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
+				}
+			}
+		});
+		systemASubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemBSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemCSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemASubprogramList.setItems(feature.systemASubprograms());
+		systemBSubprogramList.setItems(feature.systemBSubprograms());
+		systemCSubprogramList.setItems(feature.systemCSubprograms());
+		
+		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
+		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+		systemASearchResultTbl.setItems(filteredSearchResults);
+
+	}
+	
+	private void initializeModule(ModuleContainer module, 
+			TextField dirField, 
+			Label topLabel, 
+			Label bottomLabel,
+			Button parseBtn,
+			ProgressBar progressBar) 
+	{
+		if (module != null) {
+			Path path = module.getPath();
+			if (path != null) {
+				dirField.setText(path.toString());
+				topLabel.setText(path.getFileName().toString());
+				bottomLabel.setText(path.getFileName().toString());
+			}
+			if (module.getCheckSum() != null) {
+				parse(module, parseBtn, progressBar);
+			}
+		}
+	}
+	
 	@FXML
 	void openSystemABrowseDlg(ActionEvent event) {
-		open(moduleA, Main.getResources().getString("select_system_a"), systemADirFld, systemALbl, systemABottomLbl);
+		open(moduleA, systemAProgressBar, Main.getResources().getString("select_system_a"), systemADirFld, systemALbl, systemABottomLbl);
 	}
 	
 	@FXML
     void openSystemBBrowseDlg(ActionEvent event) {
-		open(moduleB, Main.getResources().getString("select_system_b"), systemBDirFld, systemBLbl, systemBBottomLbl);
+		open(moduleB, systemBProgressBar, Main.getResources().getString("select_system_b"), systemBDirFld, systemBLbl, systemBBottomLbl);
     }
 
     @FXML
     void openSystemCBrowseDlg(ActionEvent event) {
-		open(moduleC, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl, systemCBottomLbl);
+		open(moduleC, systemCProgressBar, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl, systemCBottomLbl);
     }
 
-
-	private void open(ModuleContainer module, String title, TextField txtField, Label label, Label bLabel) {
+	private void open(ModuleContainer module, ProgressBar pBar, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
 		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
 		if (selectedDir != null) {
+			if (selectedDir.toPath().getFileName() == null) throw new IllegalArgumentException();
 			txtField.setText(selectedDir.getAbsolutePath());
 			module.setPath(selectedDir.toPath());
+			pBar.progressProperty().set(DOUBLE_ZERO);
 			label.setText(module.getPath().getFileName().toString());
 			bLabel.setText(module.getPath().getFileName().toString());
 			lastKnownDir = selectedDir;
@@ -199,7 +256,11 @@ public class CoRAMainController {
 
 				@Override
 				protected ImmutableModule call() throws Exception {
-					String checkSum = Repositories.checkSumForPath(path);
+					String checkSum = module.getCheckSum();
+					if (checkSum == null) {
+						checkSum = Repositories.checkSumForPath(path);
+						module.setCheckSum(checkSum);	
+					}
 					return Repositories.getInstance().retrieve(checkSum, path, this::updateProgress);
 				}
 
@@ -256,35 +317,20 @@ public class CoRAMainController {
 	}
 
 	@FXML
-	void initialize() {
-		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
-			while(x.next()) {
-				if (x.wasAdded() || x.wasRemoved()) {
-					filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
-				}
-			}
-		});
-		systemASubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		systemBSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		systemCSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		systemASubprogramList.setItems(feature.systemASubprograms());
-		systemBSubprogramList.setItems(feature.systemBSubprograms());
-		systemCSubprogramList.setItems(feature.systemCSubprograms());
-		
-		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
-		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-		systemASearchResultTbl.setItems(filteredSearchResults);
-
-	}
-
-	@FXML
 	void findClonesSystemB(ActionEvent event) throws IOException {
+		if (moduleA == null || moduleA.getModule() == null) {
+			graphNotFoundAlert.showAndWait();
+			return;
+		}
 		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms());
 	}
 
 	@FXML
     void findClonesSystemC(ActionEvent event) throws IOException {
+		if (moduleA == null || moduleA.getModule() == null) {
+			graphNotFoundAlert.showAndWait();
+			return;
+		}
 		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms());
     }
 	
@@ -413,7 +459,7 @@ public class CoRAMainController {
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 		
-	static class SearchTask extends Task<List<EntityView>> {
+	private static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;
 		private final ImmutableModule module;
@@ -432,5 +478,11 @@ public class CoRAMainController {
 					.collect(Collectors.toList());
 		}
 		
+	}
+
+	public ApplicationState getApplicationState() {
+		String searchQuery = searchTxtFld == null ? null : searchTxtFld.getText();
+		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
+				moduleA, moduleB, moduleC, feature);
 	}
 }
