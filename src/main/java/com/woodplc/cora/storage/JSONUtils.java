@@ -17,6 +17,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
+import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.CallEdge;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
@@ -24,9 +25,13 @@ import com.woodplc.cora.data.SubProgram;
 
 public final class JSONUtils {
 
+	private static final Path STATE_JSON_FILENAME = Paths.get("last_state.json");
 	private static final String SDGRAPH_JSON_FILENAME = "sdgraph.json";
 	private static final Gson SDGRAPH_TO_GSON = new GsonBuilder()
 			.registerTypeHierarchyAdapter(SDGraph.class, new GraphAdapter())
+			.create();
+	private static final Gson STATE_TO_GSON = new GsonBuilder()
+			.serializeNulls()
 			.create();
 
 	private enum JsonFieldNames {
@@ -47,6 +52,18 @@ public final class JSONUtils {
 	
 	private JSONUtils() {}
 
+	public static ApplicationState stateFromJson() throws IOException {
+		if (Files.notExists(STATE_JSON_FILENAME)) throw new IllegalStateException();
+		return STATE_TO_GSON.fromJson(Files.newBufferedReader(STATE_JSON_FILENAME), ApplicationState.class);
+	}
+	
+	public static void stateToJson(ApplicationState state) throws IOException {
+		Objects.requireNonNull(state);
+		String jsonString = STATE_TO_GSON.toJson(state);
+
+		Files.write(STATE_JSON_FILENAME, jsonString.getBytes());
+	}
+	
 	public static SDGraph graphFromJson(Path entryPath) throws IOException {
 		Objects.requireNonNull(entryPath);
 		Path graphFilePath = Paths.get(entryPath.toString(), SDGRAPH_JSON_FILENAME);
@@ -247,5 +264,9 @@ public final class JSONUtils {
 			writer.endArray();
 		}
 
+	}
+
+	public static boolean stateFileExists() {
+		return Files.exists(STATE_JSON_FILENAME) && !Files.isDirectory(STATE_JSON_FILENAME);
 	}
 }
