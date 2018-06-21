@@ -6,10 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
 import com.woodplc.cora.data.ApplicationState;
+import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.ir.IREngine;
@@ -20,6 +23,7 @@ import com.woodplc.cora.utils.TestUtils.SoftwareSystem;
 
 class JSONUtilsTest {
 
+	private final static Path exportPath = Paths.get(SoftwareSystem.TEST.path().toString(), "feature_export.json");
 	private final IREngine engine = mock(IREngine.class);
 	
 	@Test
@@ -64,6 +68,27 @@ class JSONUtilsTest {
 		assertNotNull(restoredNonEmptyState);
 		assertTrue(nonEmptyState != restoredNonEmptyState);
 		assertTrue(nonEmptyState.equals(restoredNonEmptyState));
+	}
+	
+	@Test
+	void testFeatureClonesExport() throws IOException {
+		FeatureView emptyView = TestUtils.emptyFeatureView();
+		assertNotNull(emptyView);
+		JSONUtils.exportFeatureToJson(exportPath, emptyView);
+		
+		FeatureView restoredEmptyView = JSONUtils.loadFeatureFromJson(exportPath);
+		assertNotNull(restoredEmptyView);
+		assertTrue(emptyView != restoredEmptyView);
+		assertTrue(emptyView.equals(restoredEmptyView));
+		
+		FeatureView nonEmptyView = TestUtils.fullyInitializedFeatureView();
+		assertNotNull(nonEmptyView);
+		JSONUtils.exportFeatureToJson(exportPath, nonEmptyView);
+		
+		FeatureView restoredNonEmptyView = JSONUtils.loadFeatureFromJson(exportPath);
+		assertNotNull(restoredNonEmptyView);
+		assertTrue(nonEmptyView != restoredNonEmptyView);
+		assertTrue(nonEmptyView.equals(restoredNonEmptyView));
 	}
 
 }
