@@ -5,14 +5,19 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.Feature;
+import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
+import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
@@ -74,5 +79,25 @@ public final class TestUtils {
 		feature.systemCSubprograms().addAll("subprogram_f");
 		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
 				mc1, mc2, mc3, feature);
+	}
+
+	public static FeatureView emptyFeatureView() {
+		return new FeatureView(new HashSet<>(), new HashSet<>(), new HashSet<>());
+	}
+
+	public static FeatureView fullyInitializedFeatureView() {
+		Set<SubProgram> systemA = new HashSet<>(Arrays.asList(
+				new SubProgram("subprogram_1", 1, 5, Paths.get("path_1")),
+				new SubProgram("subprogram_2", 10, 100, Paths.get("path_2"))
+			));
+		Set<SubProgram> systemB = new HashSet<>(Arrays.asList(
+				new SubProgram("subprogram_3", 6, 7, Paths.get("path_3"))
+			));
+		Set<SubProgram> systemC = new HashSet<>(Arrays.asList(
+				new SubProgram("subprogram_4", 10, 15, Paths.get("path_4")),
+				new SubProgram("subprogram_5", 25, 30, Paths.get("path_5")),
+				new SubProgram("subprogram_6", 25, 30, Paths.get("path_6"))
+			));
+		return new FeatureView(systemA, systemB, systemC);
 	}
 }

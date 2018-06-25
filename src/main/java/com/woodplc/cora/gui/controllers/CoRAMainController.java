@@ -16,10 +16,13 @@ import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.Feature;
+import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
+import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
+import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 
 import javafx.collections.FXCollections;
@@ -44,6 +47,8 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Pane;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -51,10 +56,13 @@ public class CoRAMainController {
 		
 	private static final double DOUBLE_ZERO = 0;
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
+	private final FileChooser exportChooser = new FileChooser();
 	private String lastSearchQuery = null;
 	private File lastKnownDir = null;
 	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
 	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
+	private final Alert featureIsEmpty = new Alert(AlertType.INFORMATION, Main.getResources().getString("feature_empty"));
+	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
 	
 	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
@@ -385,8 +393,13 @@ public class CoRAMainController {
 		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
 		
-		if (module.getModule() == null) {
+		if (moduleA.getModule() == null || module.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
+			return;
+		}
+		
+		if (!moduleA.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
+			illegalStateAlert.showAndWait();
 			return;
 		}
 		
@@ -459,6 +472,77 @@ public class CoRAMainController {
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 		
+    @FXML
+    void exportFeature(ActionEvent event) {
+    	if (feature == null || feature.isEmpty()) {
+    		featureIsEmpty.showAndWait();
+    		return;
+    	}
+    	
+    	if ((!feature.systemASubprograms().isEmpty() && (moduleA == null || moduleA.getModule() == null))
+    			|| (!feature.systemBSubprograms().isEmpty() && (moduleB == null || moduleB.getModule() == null))
+    			|| (!feature.systemCSubprograms().isEmpty() && (moduleC == null || moduleC.getModule() == null))) {
+    		graphNotFoundAlert.showAndWait();
+    		return;
+    	}
+    	
+    	exportChooser.setTitle(Main.getResources().getString("export_feature_title"));
+    	exportChooser.getExtensionFilters().addAll(
+    	        new ExtensionFilter("JSON Files", "*.json")
+    	);
+    	File selectedFile = exportChooser.showSaveDialog(systemALbl.getScene().getWindow());
+    	if (selectedFile != null) {
+    		final Path exportPath = selectedFile.toPath();
+    		Task<Void> jsonExportTask = new Task<Void>() {
+
+				@Override
+				protected Void call() throws Exception {
+					final Set<String> selectedSystemA = new HashSet<>(feature.readOnlySystemASubprograms());
+					final Set<String> selectedSystemB = new HashSet<>(feature.readOnlySystemBSubprograms());
+					final Set<String> selectedSystemC = new HashSet<>(feature.readOnlySystemCSubprograms());
+					
+					Set<SubProgram> subprogramsSystemA = null;
+					Set<SubProgram> subprogramsSystemB = null;
+					Set<SubProgram> subprogramsSystemC = null;
+					if (!selectedSystemA.isEmpty()) {
+						subprogramsSystemA = moduleA.getModule().getGraph().subprograms().stream()
+								.filter(sub -> selectedSystemA.contains(sub.name()))
+								.collect(Collectors.toSet());
+					} else {
+						subprogramsSystemA = new HashSet<>();
+					}
+					
+					if (!selectedSystemB.isEmpty()) {
+						subprogramsSystemB = moduleB.getModule().getGraph().subprograms().stream()
+								.filter(sub -> selectedSystemB.contains(sub.name()))
+								.collect(Collectors.toSet());
+					} else {
+						subprogramsSystemB = new HashSet<>();
+					}
+					
+					if (!selectedSystemC.isEmpty()) {
+						subprogramsSystemC = moduleC.getModule().getGraph().subprograms().stream()
+								.filter(sub -> selectedSystemC.contains(sub.name()))
+								.collect(Collectors.toSet());
+					} else {
+						subprogramsSystemC = new HashSet<>();
+					}
+					FeatureView fv = new FeatureView(subprogramsSystemA, subprogramsSystemB, subprogramsSystemC);
+					JSONUtils.exportFeatureToJson(exportPath, fv);
+					return null;
+				}
+				
+				@Override
+				protected void failed() {
+					getException().printStackTrace();
+				}
+    			
+    		};
+    		
+    		new Thread(jsonExportTask).start();
+    	}
+    }
+	
 	private static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;

@@ -19,6 +19,7 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.CallEdge;
+import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
@@ -32,6 +33,11 @@ public final class JSONUtils {
 			.create();
 	private static final Gson STATE_TO_GSON = new GsonBuilder()
 			.serializeNulls()
+			.create();
+	private static final Gson FEATURE_TO_GSON = new GsonBuilder()
+			.serializeNulls()
+			.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
+			.setPrettyPrinting()
 			.create();
 
 	private enum JsonFieldNames {
@@ -268,5 +274,44 @@ public final class JSONUtils {
 
 	public static boolean stateFileExists() {
 		return Files.exists(STATE_JSON_FILENAME) && !Files.isDirectory(STATE_JSON_FILENAME);
+	}
+
+	public static void exportFeatureToJson(Path exportPath, FeatureView emptyView) throws IOException {
+		Objects.requireNonNull(exportPath);
+		Objects.requireNonNull(emptyView);
+		
+		if (Files.isDirectory(exportPath)) throw new IllegalArgumentException();
+		String jsonString = FEATURE_TO_GSON.toJson(emptyView);
+
+		Files.write(exportPath, jsonString.getBytes());
+	}
+
+	public static FeatureView loadFeatureFromJson(Path exportPath) throws IOException {
+		Objects.requireNonNull(exportPath);
+		if (Files.notExists(exportPath)) throw new IllegalArgumentException();
+		
+		return FEATURE_TO_GSON.fromJson(Files.newBufferedReader(exportPath), FeatureView.class);
+	}
+	
+	private static class PathAdapter extends TypeAdapter<Path> {
+
+		@Override
+		public void write(JsonWriter writer, Path path) throws IOException {
+			if (path == null) {
+				writer.nullValue();
+				return;
+			}
+			writer.value(path.toString());
+		}
+
+		@Override
+		public Path read(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			return Paths.get(reader.nextString());
+		}
+		
 	}
 }

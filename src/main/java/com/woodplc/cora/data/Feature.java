@@ -26,6 +26,12 @@ public final class Feature {
 		if (!subprogramsC.isEmpty()) this.systemCSubprograms.addAll(subprogramsC);
 	}
 	
+	public boolean isEmpty() {
+		return this.systemASubprograms.isEmpty()
+				&& this.systemBSubprograms.isEmpty()
+				&& this.systemCSubprograms.isEmpty();
+	}
+	
 	public ObservableList<String> systemASubprograms() {return systemASubprograms;}
 
 	public ObservableList<String> systemBSubprograms() {return systemBSubprograms;}
