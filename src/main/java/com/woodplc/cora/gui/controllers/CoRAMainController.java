@@ -459,6 +459,11 @@ public class CoRAMainController {
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 		
+    @FXML
+    void exportFeature(ActionEvent event) {
+
+    }
+	
 	private static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;
