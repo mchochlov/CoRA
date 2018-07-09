@@ -3,6 +3,7 @@ package com.woodplc.cora.gui.controllers;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.security.cert.Extension;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,7 +25,9 @@ import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
+import com.woodplc.cora.utils.CSVUtils;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -145,6 +148,8 @@ public class CoRAMainController {
 		
 		private ProgressBarColor(String style) {this.style = style;}
 	}
+	
+	private enum ExportType{JSON, CSV};
 
 	public CoRAMainController() {}
 
@@ -471,9 +476,23 @@ public class CoRAMainController {
 		
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
+	
+	@FXML
+    void quit(ActionEvent event) {Platform.exit();}
+	
+	@FXML
+    void about(ActionEvent event) {
+		new Alert(AlertType.INFORMATION, Main.getResources()
+				.getString("cora_about")).showAndWait();		
+    }
+	
+	@FXML
+	void exportToCsv(ActionEvent event) {exportFeature(ExportType.CSV);}
+
+	@FXML
+	void exportToJson(ActionEvent event) {exportFeature(ExportType.JSON);}
 		
-    @FXML
-    void exportFeature(ActionEvent event) {
+    private void exportFeature(ExportType exportType) {
     	if (feature == null || feature.isEmpty()) {
     		featureIsEmpty.showAndWait();
     		return;
@@ -487,13 +506,19 @@ public class CoRAMainController {
     	}
     	
     	exportChooser.setTitle(Main.getResources().getString("export_feature_title"));
-    	exportChooser.getExtensionFilters().addAll(
-    	        new ExtensionFilter("JSON Files", "*.json")
-    	);
+    	ExtensionFilter ef = null;
+    	switch(exportType) {
+    	case JSON: ef = new ExtensionFilter("JSON Files", "*.json"); break;
+    	case CSV: ef = new ExtensionFilter("CSV Files", "*.csv"); break;
+    	default:
+    		throw new IllegalArgumentException();
+    	}
+    	
+    	exportChooser.getExtensionFilters().addAll(ef);
     	File selectedFile = exportChooser.showSaveDialog(systemALbl.getScene().getWindow());
     	if (selectedFile != null) {
     		final Path exportPath = selectedFile.toPath();
-    		Task<Void> jsonExportTask = new Task<Void>() {
+    		Task<Void> exportTask = new Task<Void>() {
 
 				@Override
 				protected Void call() throws Exception {
@@ -528,7 +553,13 @@ public class CoRAMainController {
 						subprogramsSystemC = new HashSet<>();
 					}
 					FeatureView fv = new FeatureView(subprogramsSystemA, subprogramsSystemB, subprogramsSystemC);
-					JSONUtils.exportFeatureToJson(exportPath, fv);
+					switch(exportType) {
+			    	case JSON: JSONUtils.exportFeatureToJson(exportPath, fv); break;
+			    	case CSV: CSVUtils.exportFeatureToCsv(exportPath, subprogramsSystemA, subprogramsSystemB, subprogramsSystemC); break;
+			    	default:
+			    		throw new IllegalArgumentException();
+			    	}
+					
 					return null;
 				}
 				
@@ -539,7 +570,7 @@ public class CoRAMainController {
     			
     		};
     		
-    		new Thread(jsonExportTask).start();
+    		new Thread(exportTask).start();
     	}
     }
 	
