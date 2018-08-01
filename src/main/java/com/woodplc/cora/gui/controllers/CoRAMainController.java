@@ -3,7 +3,6 @@ package com.woodplc.cora.gui.controllers;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.security.cert.Extension;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -27,6 +26,7 @@ import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 import com.woodplc.cora.utils.CSVUtils;
 
+import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -138,6 +138,19 @@ public class CoRAMainController {
     private Label systemBBottomLbl;
     @FXML
     private Label systemCBottomLbl;
+    
+    @FXML
+    private Label selectedALbl;
+    @FXML
+    private Label locALbl;
+    @FXML
+    private Label selectedBLbl;
+    @FXML
+    private Label locBLbl;
+    @FXML
+    private Label selectedCLbl;
+    @FXML
+    private Label locCLbl;
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -179,19 +192,50 @@ public class CoRAMainController {
 					filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
 				}
 			}
+			setSelectedText(selectedALbl, systemASubprogramList);
 		});
+		
+		feature.systemBSubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedBLbl, systemBSubprogramList);
+		});
+		
+		feature.systemCSubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedCLbl, systemCSubprogramList);
+		});
+		
 		systemASubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemBSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemCSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASubprogramList.setItems(feature.systemASubprograms());
+		setSelectedText(selectedALbl, systemASubprogramList);
 		systemBSubprogramList.setItems(feature.systemBSubprograms());
+		setSelectedText(selectedBLbl, systemBSubprogramList);
 		systemCSubprogramList.setItems(feature.systemCSubprograms());
+		setSelectedText(selectedCLbl, systemCSubprogramList);
+		systemASubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedALbl, systemASubprogramList);
+		});
+		
+		systemBSubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedBLbl, systemBSubprogramList);
+		});
+		
+		systemCSubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedCLbl, systemCSubprogramList);
+		});
+
 		
 		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
 		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
 
+	}
+	
+	private void setSelectedText(Label label, ListView<String> lv) {
+		label.setText(lv.getSelectionModel().getSelectedItems().size() + "/" 
+				+ lv.getItems().size() + " "
+				+ Main.getResources().getString("selected"));
 	}
 	
 	private void initializeModule(ModuleContainer module, 
@@ -483,7 +527,7 @@ public class CoRAMainController {
 	@FXML
     void about(ActionEvent event) {
 		new Alert(AlertType.INFORMATION, Main.getResources()
-				.getString("cora_about")).showAndWait();		
+				.getString("cora_about")).showAndWait();
     }
 	
 	@FXML
