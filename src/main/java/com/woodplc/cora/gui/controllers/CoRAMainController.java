@@ -2,6 +2,7 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -11,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
@@ -19,6 +21,7 @@ import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
+import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.EntityView;
 import com.woodplc.cora.ir.IREngine;
@@ -26,7 +29,6 @@ import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 import com.woodplc.cora.utils.CSVUtils;
 
-import javafx.application.HostServices;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -618,6 +620,68 @@ public class CoRAMainController {
     	}
     }
 	
+    @FXML
+    void locSystemA(ActionEvent event) {
+    	calculateLoc(locALbl, feature.systemASubprograms(), moduleA.getModule().getGraph());
+    }
+
+    @FXML
+    void locSystemB(ActionEvent event) {
+    	calculateLoc(locBLbl, feature.systemBSubprograms(), moduleB.getModule().getGraph());
+    }
+
+    @FXML
+    void locSystemC(ActionEvent event) {
+    	calculateLoc(locCLbl, feature.systemCSubprograms(), moduleC.getModule().getGraph());
+    }
+    
+    private void calculateLoc(Label label, ObservableList<String> subprogramNames, SDGraph graph) {
+    	CalculateLocTask cTask = new CalculateLocTask(subprogramNames, graph);
+		cTask.setOnSucceeded((e) -> {
+			label.setText(cTask.getValue() + " " + Main.getResources().getString("loc"));
+		});
+		
+		cTask.setOnFailed((e) -> {
+			cTask.getException().printStackTrace();
+			label.setText("N/A " + Main.getResources().getString("loc"));
+		});
+		
+		new Thread(cTask).start();
+    }
+    
+    private static class CalculateLocTask extends Task<Long> {
+    	private final Set<String> subprogramNames;
+    	private final SDGraph graph;
+    	
+    	CalculateLocTask(ObservableList<String> subprogramNames, SDGraph graph) {
+			this.subprogramNames = new HashSet<>(subprogramNames);
+			if (this.subprogramNames.size() != subprogramNames.size()) throw new IllegalArgumentException();
+			this.graph = graph;
+		}
+
+		@Override
+		protected Long call() throws Exception {
+			Set<SubProgram> subprograms = graph.subprograms()
+					.stream()
+					.filter(sub -> subprogramNames.contains(sub.name()))
+					.collect(Collectors.toSet());
+			long loc = 0;
+			
+			for (SubProgram subprogram : subprograms) {
+				try(Stream<String> lines = Files.lines(subprogram.path())){
+					loc += 
+							lines.limit(subprogram.endLine())
+							.skip(subprogram.startLine())
+							.filter(s -> !s.trim().startsWith("!") && !s.startsWith("c") && !s.startsWith("C") && !s.trim().isEmpty())
+							//.forEach(System.out::println);
+							.count();
+				}
+			}
+			
+			return loc;
+		}
+    }
+    
 	private static class SearchTask extends Task<List<EntityView>> {
 		
 		private final String query;

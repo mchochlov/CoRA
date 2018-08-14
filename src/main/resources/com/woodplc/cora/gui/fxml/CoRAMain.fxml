@@ -34,6 +34,17 @@
                         <MenuItem mnemonicParsing="false" onAction="#quit" text="%menubar.file.quit" />
                   </items>
                 </Menu>
+                  <Menu mnemonicParsing="false" text="%menubar.analysis">
+                     <items>
+                        <Menu mnemonicParsing="false" text="%menubar.analysis.loc">
+                           <items>
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemA" text="%menubar.analysis.loc.systema" />
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemB" text="%menubar.analysis.loc.systemb" />
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemC" text="%menubar.analysis.loc.systemc" />
+                           </items>
+                        </Menu>
+                     </items>
+                  </Menu>
                 <Menu mnemonicParsing="false" text="%menubar.help">
                   <items>
                     <MenuItem mnemonicParsing="false" onAction="#about" text="%menubar.help.about" />
