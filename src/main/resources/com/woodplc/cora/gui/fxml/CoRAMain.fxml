@@ -147,6 +147,7 @@
                   <TableView fx:id="systemASearchResultTbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
                     <columns>
                       <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+                        <TableColumn fx:id="systemAClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
                       <TableColumn fx:id="systemAClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
                     </columns>
                      <contextMenu>

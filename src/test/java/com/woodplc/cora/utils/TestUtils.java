@@ -18,7 +18,7 @@ import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 
@@ -65,10 +65,10 @@ public final class TestUtils {
 	public static ApplicationState fullyInitializedApplicationState() {
 		File lastKnownDir = new File(SoftwareSystem.TEST.path.toString());
 		String searchQuery = "searchQuery";
-		ObservableList<EntityView> searchResults = FXCollections.observableArrayList(
-				new EntityView(1, "subprogram_1"),
-				new EntityView(2, "subprogram_2"),
-				new EntityView(3, "subprogram_3")
+		ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList(
+				new SearchEntryView(1, 0.86f, "subprogram_1"),
+				new SearchEntryView(2, 0.5f, "subprogram_2"),
+				new SearchEntryView(3, 0.25f, "subprogram_3")
 				);
 		ModuleContainer mc1 = ModuleContainer.fromValues(SoftwareSystem.FLEX3.path.toString(), "checksum_1");
 		ModuleContainer mc2 = ModuleContainer.fromValues(SoftwareSystem.DPRFLEX3.path.toString(), "checksum_2");

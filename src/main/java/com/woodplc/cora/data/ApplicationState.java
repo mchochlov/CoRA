@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.SearchEntryView;
 
 import javafx.collections.ObservableList;
 
@@ -81,12 +81,14 @@ public final class ApplicationState {
 	
 	private static class SimpleView {
 		private final int param;
+		private final float score;
 		private final String name;
 		
-		private SimpleView(int param, String name) {
-			if (param < 0 || name == null || name.isEmpty()) throw new IllegalArgumentException();
+		private SimpleView(int param, float score, String name) {
+			if (param < 0 || score < 0 || name == null || name.isEmpty()) throw new IllegalArgumentException();
 			
 			this.param = param;
+			this.score = score;
 			this.name = name;
 		}
 
@@ -96,18 +98,19 @@ public final class ApplicationState {
 			if (!(o instanceof SimpleView)) return false;
 			SimpleView sv = (SimpleView) o;
 			return this.param == sv.param
+					&& this.score == sv.score
 					&& Objects.equals(this.name, sv.name);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(param, name);
+			return Objects.hash(param, score, name);
 		}
 	}
 		
 	public ApplicationState(File lastKnownDir,
 			String searchQuery,
-			ObservableList<EntityView> searchResults,
+			ObservableList<SearchEntryView> searchResults,
 			ModuleContainer moduleA,
 			ModuleContainer moduleB,
 			ModuleContainer moduleC,
@@ -121,7 +124,7 @@ public final class ApplicationState {
 		this.searchQuery = searchQuery;
 		this.searchResults = searchResults.isEmpty() ? new ArrayList<>() : 
 				searchResults.stream()
-				.map(ev -> new SimpleView(ev.getParam(), ev.getName()))
+				.map(ev -> new SimpleView(ev.getParam(), ev.getScore(), ev.getName()))
 				.collect(Collectors.toList());
 		this.stateA = new ModuleState(moduleA.getPath(), moduleA.getCheckSum());
 		this.stateB = new ModuleState(moduleB.getPath(), moduleB.getCheckSum());
@@ -135,9 +138,9 @@ public final class ApplicationState {
 
 	public String getSearchQuery() {return searchQuery;}
 
-	public List<EntityView> getSearchResults() {
+	public List<SearchEntryView> getSearchResults() {
 		return Collections.unmodifiableList(searchResults.stream()
-				.map(sv -> new EntityView(sv.param, sv.name))
+				.map(sv -> new SearchEntryView(sv.param, sv.score, sv.name))
 				.collect(Collectors.toList()));
 	}
 

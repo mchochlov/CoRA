@@ -23,7 +23,8 @@ import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.CallDependencyView;
+import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
@@ -69,8 +70,8 @@ public class CoRAMainController {
 	private final Alert featureIsEmpty = new Alert(AlertType.INFORMATION, Main.getResources().getString("feature_empty"));
 	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
 	
-	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
-	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
+	private final ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList();
+	private final FilteredList<SearchEntryView> filteredSearchResults = new FilteredList<>(searchResults);
 	
 	private ModuleContainer moduleA = ModuleContainer.empty();
 	private ModuleContainer moduleB = ModuleContainer.empty();
@@ -126,13 +127,14 @@ public class CoRAMainController {
     private Button systemASearchBtn;
 	
 	@FXML
-	private TableColumn<EntityView, Integer> systemAClmnId;
+	private TableColumn<SearchEntryView, Integer> systemAClmnId;
+	@FXML
+	private TableColumn<SearchEntryView, Integer> systemAClmnScore;
+	@FXML
+	private TableColumn<SearchEntryView, String> systemAClmnName;
 
 	@FXML
-	private TableColumn<EntityView, String> systemAClmnName;
-
-	@FXML
-	private TableView<EntityView> systemASearchResultTbl;
+	private TableView<SearchEntryView> systemASearchResultTbl;
 	
 	@FXML
     private Label systemABottomLbl;
@@ -227,8 +229,9 @@ public class CoRAMainController {
 		});
 
 		
-		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		systemAClmnId.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("param"));
+		systemAClmnScore.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("score"));
+		systemAClmnName.setCellValueFactory(new PropertyValueFactory<SearchEntryView, String>("name"));
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
 
@@ -400,11 +403,11 @@ public class CoRAMainController {
 
 	@FXML
 	void systemAMarkSubprogram(ActionEvent event) {
-		ObservableList<EntityView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
+		ObservableList<SearchEntryView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
 		if (selectedItems.isEmpty()) {return;}
 		feature.systemASubprograms().addAll(selectedItems
 				.stream()
-				.map(EntityView::getName)
+				.map(SearchEntryView::getName)
 				.collect(Collectors.toList()));
 	}
 
@@ -489,16 +492,16 @@ public class CoRAMainController {
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
-		ObservableList<EntityView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
+		ObservableList<CallDependencyView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanOut(s), s))
+				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<EntityView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<CallDependencyView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanIn(s), s))
+				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
@@ -682,7 +685,7 @@ public class CoRAMainController {
 		}
     }
     
-	private static class SearchTask extends Task<List<EntityView>> {
+	private static class SearchTask extends Task<List<SearchEntryView>> {
 		
 		private final String query;
 		private final ImmutableModule module;
@@ -693,11 +696,11 @@ public class CoRAMainController {
 		}
 		
 		@Override
-		protected List<EntityView> call() throws Exception {
+		protected List<SearchEntryView> call() throws Exception {
 			IREngine engine = module.getEngine();
 			final AtomicInteger counter = new AtomicInteger(0);
 			return engine.search(query).stream()
-					.map(res -> new EntityView(counter.incrementAndGet(), res))
+					.map(res -> new SearchEntryView(counter.incrementAndGet(), res))
 					.collect(Collectors.toList());
 		}
 		
