@@ -130,7 +130,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	}
 
 	@Override
-	public List<String> search(String queryString) {
+	public List<SearchEntry> search(String queryString) {
 		if (queryString == null || queryString.isEmpty()) {
 			throw new IllegalArgumentException();
 		}
@@ -142,9 +142,10 @@ final class LuceneIREngineWrapper implements IREngine {
 			
 			ScoreDoc[] hits = searcher.search(query, MAX_HITS).scoreDocs;
 			
-			List<String> matchingSubprograms = new ArrayList<>();
+			List<SearchEntry> matchingSubprograms = new ArrayList<>();
 			for (ScoreDoc hit : hits) {
-				matchingSubprograms.add(searcher.doc(hit.doc).get(Fields.NAME.name()));
+				matchingSubprograms.add(new SearchEntry(hit.score, 
+						searcher.doc(hit.doc).get(Fields.NAME.name())));
 			}
 			return matchingSubprograms;
 			
@@ -211,7 +212,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	}
 
 	@Override
-	public List<String> moreLikeThis(List<String> termVector, String query) {
+	public List<SearchEntry> moreLikeThis(List<String> termVector, String query) {
 		Objects.requireNonNull(termVector);
 		if (termVector.isEmpty() && (query == null || query.isEmpty())) {
 			throw new IllegalArgumentException();
@@ -235,9 +236,9 @@ final class LuceneIREngineWrapper implements IREngine {
 			
 			ScoreDoc[] hits = searcher.search(finalQuery, MAX_HITS).scoreDocs;
 			
-			List<String> matchingSubprograms = new ArrayList<>();
+			List<SearchEntry> matchingSubprograms = new ArrayList<>();
 			for (ScoreDoc hit : hits) {
-				matchingSubprograms.add(searcher.doc(hit.doc).get(Fields.NAME.name()));
+				matchingSubprograms.add(new SearchEntry(hit.score, searcher.doc(hit.doc).get(Fields.NAME.name())));
 			}
 			return matchingSubprograms;			
 		} catch (IOException | ParseException e) {

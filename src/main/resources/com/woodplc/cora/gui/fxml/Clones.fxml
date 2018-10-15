@@ -21,6 +21,7 @@
       <TableView fx:id="clonesTbl" prefHeight="349.0" prefWidth="521.0" VBox.vgrow="ALWAYS">
         <columns>
           <TableColumn fx:id="ranlClmn" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+            <TableColumn fx:id="ranlClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
           <TableColumn fx:id="cloneClmn" prefWidth="445.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
         </columns>
       </TableView>

@@ -3,7 +3,7 @@ package com.woodplc.cora.gui.controllers;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.CallDependencyView;
 
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -16,31 +16,31 @@ import javafx.scene.control.cell.PropertyValueFactory;
 
 class AdjacentSubprogramsController extends Controller {
 	
-	private final ObservableList<EntityView> callers;
-	private final ObservableList<EntityView> callees;
+	private final ObservableList<CallDependencyView> callers;
+	private final ObservableList<CallDependencyView> callees;
 	
 	@FXML
     private Label callersLbl;
 
     @FXML
-    private TableView<EntityView> callersTbl;
+    private TableView<CallDependencyView> callersTbl;
     @FXML
-    private TableColumn<EntityView, Integer> fanInClmn;
+    private TableColumn<CallDependencyView, Integer> fanInClmn;
     @FXML
-    private TableColumn<EntityView, String> callerClmn;
+    private TableColumn<CallDependencyView, String> callerClmn;
 
     @FXML
     private Label calleesLbl;
 
     @FXML
-    private TableView<EntityView> calleesTbl;
+    private TableView<CallDependencyView> calleesTbl;
     @FXML
-    private TableColumn<EntityView, Integer> fanOutClmn;
+    private TableColumn<CallDependencyView, Integer> fanOutClmn;
     @FXML
-    private TableColumn<EntityView, String> calleeClmn;
+    private TableColumn<CallDependencyView, String> calleeClmn;
 	
 	AdjacentSubprogramsController(String subname, ObservableList<String> systemSubprograms,
-			ObservableList<EntityView> callers, ObservableList<EntityView> callees) {
+			ObservableList<CallDependencyView> callers, ObservableList<CallDependencyView> callees) {
 		super(subname, systemSubprograms);
 		this.callers = Objects.requireNonNull(callers);
 		this.callees = Objects.requireNonNull(callees);
@@ -54,10 +54,10 @@ class AdjacentSubprogramsController extends Controller {
 		callersTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		calleesTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		
-		fanInClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		callerClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
-		fanOutClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		calleeClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		fanInClmn.setCellValueFactory(new PropertyValueFactory<CallDependencyView, Integer>("numCalls"));
+		callerClmn.setCellValueFactory(new PropertyValueFactory<CallDependencyView, String>("name"));
+		fanOutClmn.setCellValueFactory(new PropertyValueFactory<CallDependencyView, Integer>("numCalls"));
+		calleeClmn.setCellValueFactory(new PropertyValueFactory<CallDependencyView, String>("name"));
 		
 		callersTbl.setItems(callers);
 		callersTbl.getSortOrder().add(fanInClmn);
@@ -67,14 +67,14 @@ class AdjacentSubprogramsController extends Controller {
 
 	@FXML
     void selectAdjacentSubprograms(ActionEvent event) {
-		ObservableList<EntityView> selectedCallers = callersTbl.getSelectionModel().getSelectedItems();
-		ObservableList<EntityView> selectedCallees = calleesTbl.getSelectionModel().getSelectedItems();
+		ObservableList<CallDependencyView> selectedCallers = callersTbl.getSelectionModel().getSelectedItems();
+		ObservableList<CallDependencyView> selectedCallees = calleesTbl.getSelectionModel().getSelectedItems();
 		if (selectedCallers.isEmpty() && selectedCallees.isEmpty()) {return;}
 		
 		if (!selectedCallers.isEmpty()) {
 			systemSubprograms.addAll(selectedCallers
 					.stream()
-					.map(EntityView::getName)
+					.map(CallDependencyView::getName)
 					.collect(Collectors.toSet()));
 			callers.removeAll(selectedCallers);
 		}
@@ -82,7 +82,7 @@ class AdjacentSubprogramsController extends Controller {
 		if (!selectedCallees.isEmpty()) {
 			systemSubprograms.addAll(selectedCallees
 					.stream()
-					.map(EntityView::getName)
+					.map(CallDependencyView::getName)
 					.collect(Collectors.toSet()));
 			callees.removeAll(selectedCallees);
 		}

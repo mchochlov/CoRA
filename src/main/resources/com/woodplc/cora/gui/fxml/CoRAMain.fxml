@@ -5,6 +5,8 @@
 <?import javafx.scene.control.ContextMenu?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.SplitPane?>
@@ -19,6 +21,37 @@
    <top>
       <VBox prefHeight="81.0" prefWidth="589.0" spacing="5.0" BorderPane.alignment="CENTER">
          <children>
+            <MenuBar>
+              <menus>
+                <Menu mnemonicParsing="false" text="%menubar.file">
+                  <items>
+                        <Menu mnemonicParsing="false" text="%menubar.file.export">
+                          <items>
+                            <MenuItem mnemonicParsing="false" onAction="#exportToJson" text="%menubar.file.export.json" />
+                          <MenuItem mnemonicParsing="false" onAction="#exportToCsv" text="%menubar.file.export.csv" />
+                          </items>
+                        </Menu>
+                        <MenuItem mnemonicParsing="false" onAction="#quit" text="%menubar.file.quit" />
+                  </items>
+                </Menu>
+                  <Menu mnemonicParsing="false" text="%menubar.analysis">
+                     <items>
+                        <Menu mnemonicParsing="false" text="%menubar.analysis.loc">
+                           <items>
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemA" text="%menubar.analysis.loc.systema" />
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemB" text="%menubar.analysis.loc.systemb" />
+                              <MenuItem mnemonicParsing="false" onAction="#locSystemC" text="%menubar.analysis.loc.systemc" />
+                           </items>
+                        </Menu>
+                     </items>
+                  </Menu>
+                <Menu mnemonicParsing="false" text="%menubar.help">
+                  <items>
+                    <MenuItem mnemonicParsing="false" onAction="#about" text="%menubar.help.about" />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
             <HBox spacing="10.0">
                <children>
                   <Label prefWidth="60.0" text="%system_a_lbl">
@@ -40,6 +73,9 @@
                      </HBox.margin>
                   </ProgressBar>
                </children>
+               <padding>
+                  <Insets left="15.0" right="15.0" />
+               </padding>
             </HBox>
             <HBox spacing="10.0">
                <children>
@@ -62,6 +98,9 @@
                      </HBox.margin>
                   </ProgressBar>
                </children>
+               <padding>
+                  <Insets left="15.0" right="15.0" />
+               </padding>
             </HBox>
             <HBox spacing="10.0">
                <children>
@@ -84,10 +123,13 @@
                      </HBox.margin>
                   </ProgressBar>
                </children>
+               <padding>
+                  <Insets left="15.0" right="15.0" />
+               </padding>
             </HBox>
          </children>
          <padding>
-            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+            <Insets bottom="15.0" />
          </padding>
       </VBox>
    </top>
@@ -105,6 +147,7 @@
                   <TableView fx:id="systemASearchResultTbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
                     <columns>
                       <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+                        <TableColumn fx:id="systemAClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
                       <TableColumn fx:id="systemAClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
                     </columns>
                      <contextMenu>
@@ -143,6 +186,12 @@
                               </ContextMenu>
                            </contextMenu>
                         </ListView>
+                        <HBox layoutX="10.0" layoutY="10.0" spacing="10.0">
+                           <children>
+                              <Label fx:id="selectedALbl" prefWidth="105.0" />
+                              <Label fx:id="locALbl" prefWidth="70.0" />
+                           </children>
+                        </HBox>
                      </children>
                   </VBox>
                   <VBox HBox.hgrow="ALWAYS">
@@ -161,6 +210,12 @@
                                  </items>
                               </ContextMenu>
                            </contextMenu></ListView>
+                        <HBox spacing="10.0">
+                           <children>
+                              <Label fx:id="selectedBLbl" prefWidth="105.0" />
+                              <Label fx:id="locBLbl" prefWidth="70.0" />
+                           </children>
+                        </HBox>
                      </children>
                   </VBox>
                   <VBox HBox.hgrow="ALWAYS">
@@ -179,6 +234,12 @@
                                  </items>
                               </ContextMenu>
                            </contextMenu></ListView>
+                        <HBox spacing="10.0">
+                           <children>
+                              <Label fx:id="selectedCLbl" prefWidth="105.0" />
+                              <Label fx:id="locCLbl" prefWidth="70.0" />
+                           </children>
+                        </HBox>
                      </children>
                   </VBox>
                </children>
@@ -195,14 +256,4 @@
          </opaqueInsets>
       </SplitPane>
    </center>
-   <bottom>
-      <HBox spacing="10.0" BorderPane.alignment="CENTER">
-         <children>
-            <Button mnemonicParsing="false" onAction="#exportFeature" text="%export_btn" />
-         </children>
-         <padding>
-            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
-         </padding>
-      </HBox>
-   </bottom>
 </BorderPane>

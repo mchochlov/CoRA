@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
 
 import javafx.collections.FXCollections;
@@ -23,7 +23,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 
 class ClonesController extends Controller {
 
-	private final ObservableList<EntityView> clones = FXCollections.observableArrayList();
+	private final ObservableList<SearchEntryView> clones = FXCollections.observableArrayList();
 	private final IREngine engineA;
 	private final IREngine engineOther;
 	
@@ -42,19 +42,22 @@ class ClonesController extends Controller {
     private Button searchBtn;
 
 	@FXML
-	private TableView<EntityView> clonesTbl;
+	private TableView<SearchEntryView> clonesTbl;
 	@FXML
-	private TableColumn<EntityView, Integer> ranlClmn;
+	private TableColumn<SearchEntryView, Integer> ranlClmn;
 	@FXML
-	private TableColumn<EntityView, String> cloneClmn;
+	private TableColumn<SearchEntryView, Integer> ranlClmnScore;
+	@FXML
+	private TableColumn<SearchEntryView, String> cloneClmn;
 
 	@FXML
 	void initialize() {
 		clonesLbl.setText(clonesLbl.getText() + " " + subname);
 		clonesTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-		ranlClmn.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		cloneClmn.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		ranlClmn.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("param"));
+		ranlClmnScore.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("score"));
+		cloneClmn.setCellValueFactory(new PropertyValueFactory<SearchEntryView, String>("name"));
 
 		clonesTbl.setItems(clones);
 	}
@@ -83,17 +86,17 @@ class ClonesController extends Controller {
 
 	@FXML
 	void selectSubprograms(ActionEvent event) {
-		ObservableList<EntityView> selectedClones = clonesTbl.getSelectionModel().getSelectedItems();
+		ObservableList<SearchEntryView> selectedClones = clonesTbl.getSelectionModel().getSelectedItems();
 		if (selectedClones.isEmpty()) {return;}
 		
 		systemSubprograms.addAll(selectedClones
 				.stream()
-				.map(EntityView::getName)
+				.map(SearchEntryView::getName)
 				.collect(Collectors.toSet()));
 		clones.removeAll(selectedClones);
 	}
 
-	static class FindClonesTask extends Task<List<EntityView>> {
+	static class FindClonesTask extends Task<List<SearchEntryView>> {
 		
 		private final String subname;
 		private final String query;
@@ -108,11 +111,11 @@ class ClonesController extends Controller {
 		}
 		
 		@Override
-		protected List<EntityView> call() throws Exception {
+		protected List<SearchEntryView> call() throws Exception {
 			List<String> termVector = this.engineA.getDocumentTermVector(subname);
 			final AtomicInteger counter = new AtomicInteger(0);
 			return this.engineOther.moreLikeThis(termVector, query).stream()
-					.map(res -> new EntityView(counter.incrementAndGet(), res))
+					.map(res -> new SearchEntryView(counter.incrementAndGet(), res))
 					.collect(Collectors.toList());
 		}
 	}

@@ -11,11 +11,11 @@ public interface IREngine {
 	
 	void index(String subname, String textData);
 	
-	List<String> moreLikeThis(List<String> termVector, String query);
+	List<SearchEntry> moreLikeThis(List<String> termVector, String query);
 	
 	void save();
 
-	List<String> search(String query);
+	List<SearchEntry> search(String query);
 	
 	void close();
 

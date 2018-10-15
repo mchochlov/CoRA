@@ -2,6 +2,7 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -11,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
@@ -19,12 +21,16 @@ import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
+import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
-import com.woodplc.cora.gui.model.EntityView;
+import com.woodplc.cora.gui.model.CallDependencyView;
+import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
+import com.woodplc.cora.utils.CSVUtils;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -64,8 +70,8 @@ public class CoRAMainController {
 	private final Alert featureIsEmpty = new Alert(AlertType.INFORMATION, Main.getResources().getString("feature_empty"));
 	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
 	
-	private final ObservableList<EntityView> searchResults = FXCollections.observableArrayList();
-	private final FilteredList<EntityView> filteredSearchResults = new FilteredList<>(searchResults);
+	private final ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList();
+	private final FilteredList<SearchEntryView> filteredSearchResults = new FilteredList<>(searchResults);
 	
 	private ModuleContainer moduleA = ModuleContainer.empty();
 	private ModuleContainer moduleB = ModuleContainer.empty();
@@ -121,13 +127,14 @@ public class CoRAMainController {
     private Button systemASearchBtn;
 	
 	@FXML
-	private TableColumn<EntityView, Integer> systemAClmnId;
+	private TableColumn<SearchEntryView, Integer> systemAClmnId;
+	@FXML
+	private TableColumn<SearchEntryView, Integer> systemAClmnScore;
+	@FXML
+	private TableColumn<SearchEntryView, String> systemAClmnName;
 
 	@FXML
-	private TableColumn<EntityView, String> systemAClmnName;
-
-	@FXML
-	private TableView<EntityView> systemASearchResultTbl;
+	private TableView<SearchEntryView> systemASearchResultTbl;
 	
 	@FXML
     private Label systemABottomLbl;
@@ -135,6 +142,19 @@ public class CoRAMainController {
     private Label systemBBottomLbl;
     @FXML
     private Label systemCBottomLbl;
+    
+    @FXML
+    private Label selectedALbl;
+    @FXML
+    private Label locALbl;
+    @FXML
+    private Label selectedBLbl;
+    @FXML
+    private Label locBLbl;
+    @FXML
+    private Label selectedCLbl;
+    @FXML
+    private Label locCLbl;
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -145,6 +165,8 @@ public class CoRAMainController {
 		
 		private ProgressBarColor(String style) {this.style = style;}
 	}
+	
+	private enum ExportType{JSON, CSV};
 
 	public CoRAMainController() {}
 
@@ -174,19 +196,51 @@ public class CoRAMainController {
 					filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
 				}
 			}
+			setSelectedText(selectedALbl, systemASubprogramList);
 		});
+		
+		feature.systemBSubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedBLbl, systemBSubprogramList);
+		});
+		
+		feature.systemCSubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedCLbl, systemCSubprogramList);
+		});
+		
 		systemASubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemBSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemCSubprogramList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASubprogramList.setItems(feature.systemASubprograms());
+		setSelectedText(selectedALbl, systemASubprogramList);
 		systemBSubprogramList.setItems(feature.systemBSubprograms());
+		setSelectedText(selectedBLbl, systemBSubprogramList);
 		systemCSubprogramList.setItems(feature.systemCSubprograms());
+		setSelectedText(selectedCLbl, systemCSubprogramList);
+		systemASubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedALbl, systemASubprogramList);
+		});
 		
-		systemAClmnId.setCellValueFactory(new PropertyValueFactory<EntityView, Integer>("param"));
-		systemAClmnName.setCellValueFactory(new PropertyValueFactory<EntityView, String>("name"));
+		systemBSubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedBLbl, systemBSubprogramList);
+		});
+		
+		systemCSubprogramList.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> x) -> {
+			setSelectedText(selectedCLbl, systemCSubprogramList);
+		});
+
+		
+		systemAClmnId.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("param"));
+		systemAClmnScore.setCellValueFactory(new PropertyValueFactory<SearchEntryView, Integer>("score"));
+		systemAClmnName.setCellValueFactory(new PropertyValueFactory<SearchEntryView, String>("name"));
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
 
+	}
+	
+	private void setSelectedText(Label label, ListView<String> lv) {
+		label.setText(lv.getSelectionModel().getSelectedItems().size() + "/" 
+				+ lv.getItems().size() + " "
+				+ Main.getResources().getString("selected"));
 	}
 	
 	private void initializeModule(ModuleContainer module, 
@@ -349,11 +403,11 @@ public class CoRAMainController {
 
 	@FXML
 	void systemAMarkSubprogram(ActionEvent event) {
-		ObservableList<EntityView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
+		ObservableList<SearchEntryView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
 		if (selectedItems.isEmpty()) {return;}
 		feature.systemASubprograms().addAll(selectedItems
 				.stream()
-				.map(EntityView::getName)
+				.map(SearchEntryView::getName)
 				.collect(Collectors.toList()));
 	}
 
@@ -438,16 +492,16 @@ public class CoRAMainController {
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
 			ObservableList<String> fSubprograms) {
-		ObservableList<EntityView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
+		ObservableList<CallDependencyView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanOut(s), s))
+				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<EntityView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<CallDependencyView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new EntityView(moduleA.getModule().getGraph().getFanIn(s), s))
+				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
@@ -471,9 +525,23 @@ public class CoRAMainController {
 		
 		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
+	
+	@FXML
+    void quit(ActionEvent event) {Platform.exit();}
+	
+	@FXML
+    void about(ActionEvent event) {
+		new Alert(AlertType.INFORMATION, Main.getResources()
+				.getString("cora_about")).showAndWait();
+    }
+	
+	@FXML
+	void exportToCsv(ActionEvent event) {exportFeature(ExportType.CSV);}
+
+	@FXML
+	void exportToJson(ActionEvent event) {exportFeature(ExportType.JSON);}
 		
-    @FXML
-    void exportFeature(ActionEvent event) {
+    private void exportFeature(ExportType exportType) {
     	if (feature == null || feature.isEmpty()) {
     		featureIsEmpty.showAndWait();
     		return;
@@ -487,13 +555,19 @@ public class CoRAMainController {
     	}
     	
     	exportChooser.setTitle(Main.getResources().getString("export_feature_title"));
-    	exportChooser.getExtensionFilters().addAll(
-    	        new ExtensionFilter("JSON Files", "*.json")
-    	);
+    	ExtensionFilter ef = null;
+    	switch(exportType) {
+    	case JSON: ef = new ExtensionFilter("JSON Files", "*.json"); break;
+    	case CSV: ef = new ExtensionFilter("CSV Files", "*.csv"); break;
+    	default:
+    		throw new IllegalArgumentException();
+    	}
+    	
+    	exportChooser.getExtensionFilters().addAll(ef);
     	File selectedFile = exportChooser.showSaveDialog(systemALbl.getScene().getWindow());
     	if (selectedFile != null) {
     		final Path exportPath = selectedFile.toPath();
-    		Task<Void> jsonExportTask = new Task<Void>() {
+    		Task<Void> exportTask = new Task<Void>() {
 
 				@Override
 				protected Void call() throws Exception {
@@ -528,7 +602,13 @@ public class CoRAMainController {
 						subprogramsSystemC = new HashSet<>();
 					}
 					FeatureView fv = new FeatureView(subprogramsSystemA, subprogramsSystemB, subprogramsSystemC);
-					JSONUtils.exportFeatureToJson(exportPath, fv);
+					switch(exportType) {
+			    	case JSON: JSONUtils.exportFeatureToJson(exportPath, fv); break;
+			    	case CSV: CSVUtils.exportFeatureToCsv(exportPath, subprogramsSystemA, subprogramsSystemB, subprogramsSystemC); break;
+			    	default:
+			    		throw new IllegalArgumentException();
+			    	}
+					
 					return null;
 				}
 				
@@ -539,11 +619,73 @@ public class CoRAMainController {
     			
     		};
     		
-    		new Thread(jsonExportTask).start();
+    		new Thread(exportTask).start();
     	}
     }
 	
-	private static class SearchTask extends Task<List<EntityView>> {
+    @FXML
+    void locSystemA(ActionEvent event) {
+    	calculateLoc(locALbl, feature.systemASubprograms(), moduleA.getModule().getGraph());
+    }
+
+    @FXML
+    void locSystemB(ActionEvent event) {
+    	calculateLoc(locBLbl, feature.systemBSubprograms(), moduleB.getModule().getGraph());
+    }
+
+    @FXML
+    void locSystemC(ActionEvent event) {
+    	calculateLoc(locCLbl, feature.systemCSubprograms(), moduleC.getModule().getGraph());
+    }
+    
+    private void calculateLoc(Label label, ObservableList<String> subprogramNames, SDGraph graph) {
+    	CalculateLocTask cTask = new CalculateLocTask(subprogramNames, graph);
+		cTask.setOnSucceeded((e) -> {
+			label.setText(cTask.getValue() + " " + Main.getResources().getString("loc"));
+		});
+		
+		cTask.setOnFailed((e) -> {
+			cTask.getException().printStackTrace();
+			label.setText("N/A " + Main.getResources().getString("loc"));
+		});
+		
+		new Thread(cTask).start();
+    }
+    
+    private static class CalculateLocTask extends Task<Long> {
+    	private final Set<String> subprogramNames;
+    	private final SDGraph graph;
+    	
+    	CalculateLocTask(ObservableList<String> subprogramNames, SDGraph graph) {
+			this.subprogramNames = new HashSet<>(subprogramNames);
+			if (this.subprogramNames.size() != subprogramNames.size()) throw new IllegalArgumentException();
+			this.graph = graph;
+		}
+
+		@Override
+		protected Long call() throws Exception {
+			Set<SubProgram> subprograms = graph.subprograms()
+					.stream()
+					.filter(sub -> subprogramNames.contains(sub.name()))
+					.collect(Collectors.toSet());
+			long loc = 0;
+			
+			for (SubProgram subprogram : subprograms) {
+				try(Stream<String> lines = Files.lines(subprogram.path())){
+					loc += 
+							lines.limit(subprogram.endLine())
+							.skip(subprogram.startLine())
+							.filter(s -> !s.trim().startsWith("!") && !s.startsWith("c") && !s.startsWith("C") && !s.trim().isEmpty())
+							//.forEach(System.out::println);
+							.count();
+				}
+			}
+			
+			return loc;
+		}
+    }
+    
+	private static class SearchTask extends Task<List<SearchEntryView>> {
 		
 		private final String query;
 		private final ImmutableModule module;
@@ -554,11 +696,11 @@ public class CoRAMainController {
 		}
 		
 		@Override
-		protected List<EntityView> call() throws Exception {
+		protected List<SearchEntryView> call() throws Exception {
 			IREngine engine = module.getEngine();
 			final AtomicInteger counter = new AtomicInteger(0);
 			return engine.search(query).stream()
-					.map(res -> new EntityView(counter.incrementAndGet(), res))
+					.map(res -> new SearchEntryView(counter.incrementAndGet(), res))
 					.collect(Collectors.toList());
 		}
 		
