@@ -415,7 +415,27 @@ public class CoRAMainController {
 	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
 		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms());
 	}
-	
+
+	@FXML
+    void systemBAdjacentSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms());
+    }
+
+    @FXML
+    void systemBVarControlledSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms());
+    }
+
+    @FXML
+    void systemCAdjacentSubprograms(ActionEvent event) throws IOException {
+    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms());
+    }
+
+    @FXML
+    void systemCVarControlledSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms());
+    }
+
 	@FXML
     void removeItemsSystemA(ActionEvent event) {
 		removeItems(systemASubprogramList, feature.systemASubprograms());
@@ -439,24 +459,61 @@ public class CoRAMainController {
 	
 	private void loadStage(Resource resource, String title, 
 			ModuleContainer module, ObservableList<String> fSubprograms) throws IOException {
-		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
-			multipleSelectionAlert.showAndWait();
-			return;
+		String selectedSubprogram = null;
+		switch(resource) {
+		case ADJACENT_FXML:
+		case VAR_FXML:
+			if (module.equals(moduleA)) {
+				if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+			}
+			
+			if (module.equals(moduleB)) {
+				if (systemBSubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemBSubprogramList.getSelectionModel().getSelectedItem();
+			}
+			
+			if (module.equals(moduleC)) {
+				if (systemCSubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemCSubprogramList.getSelectionModel().getSelectedItem();
+			}
+			if (!module.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
+				illegalStateAlert.showAndWait();
+				return;
+			}
+
+			break;
+
+		case CLONES_FXML:
+			if (moduleA.getModule() == null || module.getModule() == null) {
+				graphNotFoundAlert.showAndWait();
+				return;
+			}
+			if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+				multipleSelectionAlert.showAndWait();
+				return;
+			}
+			selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+			if (!moduleA.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
+				illegalStateAlert.showAndWait();
+				return;
+			}
+			break;
+		default:
+			throw new IllegalArgumentException();
 		}
-		
-		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
-		
-		if (moduleA.getModule() == null || module.getModule() == null) {
-			graphNotFoundAlert.showAndWait();
-			return;
-		}
-		
-		if (!moduleA.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
-			illegalStateAlert.showAndWait();
-			return;
-		}
-		
+				
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(resource.path()), Main.getResources());
 		Controller controller = getControllerForResource(resource, selectedSubprogram, fSubprograms, module);
 		loader.setController(controller);
@@ -475,9 +532,9 @@ public class CoRAMainController {
 			ObservableList<String> fSubprograms, ModuleContainer module) {
 		switch(resource) {
 		case ADJACENT_FXML:
-		return constructASController(selectedSubprogram, fSubprograms);
+		return constructASController(selectedSubprogram, fSubprograms, module);
 		case VAR_FXML:
-		return constructVCController(selectedSubprogram, fSubprograms);
+		return constructVCController(selectedSubprogram, fSubprograms, module);
 		case CLONES_FXML:
 		return new ClonesController(
 				selectedSubprogram,
@@ -491,26 +548,26 @@ public class CoRAMainController {
 	}
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
-			ObservableList<String> fSubprograms) {
-		ObservableList<CallDependencyView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
+			ObservableList<String> fSubprograms, ModuleContainer module) {
+		ObservableList<CallDependencyView> callers = module.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanOut(s), s))
+				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<CallDependencyView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<CallDependencyView> callees = module.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanIn(s), s))
+				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
 	}
 	
 	private VariableControlledController constructVCController(String selectedSubprogram,
-			ObservableList<String> fSubprograms) {
+			ObservableList<String> fSubprograms, ModuleContainer module) {
 		final Set<String> duplicates = new HashSet<>();
-		Map<String, Set<String>> variables = moduleA.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
+		Map<String, Set<String>> variables = module.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
 			.entrySet()
 			.stream()
 			.map(x -> {
