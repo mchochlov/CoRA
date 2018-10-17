@@ -37,4 +37,6 @@ public interface SDGraph {
 	Map<String, Collection<String>> variables();
 	
 	Map<String, Set<String>> getVariablesAndCallees(String subname);
+
+	Set<String> getUnreferencedSubprograms();
 }

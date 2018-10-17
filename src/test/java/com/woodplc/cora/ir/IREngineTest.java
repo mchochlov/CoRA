@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +45,10 @@ class IREngineTest {
 		for (Map.Entry<String, String> entry : queryAndResult.entrySet()) {
 			List<String> previousSearchResults = Files.readAllLines(Paths.get(getClass().getResource(entry.getValue()).toURI()));
 			assertNotNull(previousSearchResults);
-			assertTrue(previousSearchResults.equals(engine.search(entry.getKey())));
+			assertTrue(previousSearchResults.equals(
+					engine.search(entry.getKey()).stream().map(SearchEntry::getName)
+					.collect(Collectors.toList())
+			));
 		}
 		
 		engine.close();
@@ -67,7 +71,10 @@ class IREngineTest {
 		for (Map.Entry<String, String> entry : queryAndResult.entrySet()) {
 			List<String> previousSearchResults = Files.readAllLines(Paths.get(getClass().getResource(entry.getValue()).toURI()));
 			assertNotNull(previousSearchResults);
-			assertTrue(previousSearchResults.equals(engine.search(entry.getKey())));
+			assertTrue(previousSearchResults.equals(
+					engine.search(entry.getKey()).stream().map(SearchEntry::getName)
+					.collect(Collectors.toList())
+			));
 		}
 		
 		engine.close();

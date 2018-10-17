@@ -34,6 +34,15 @@ class GraphTest {
 	private static final int NUM_SUBPROGRAM_MEMBERS = 3;
 	private static final String VARIABLE_CALLEES_FILE = "variable_callees.txt";
 	private static final int NUM_VARIABLE_MEMBERS = 2;
+	private static final Set<String> correctUnreferencedSubprograms = new HashSet<>(
+			Arrays.asList("lin_flex_joint_prop", "xloc", "mxout", "dllmain",
+					"initialiseids", "case_insensitive_compare",
+					"newstorage_fn", "set", "exampleprint_sub", "iprint",
+					"readwavegeneralmaxes01_fn", "read_wave_general_maxes_01",
+					"readwavegeneraldata01_fn", "read_wave_general_data_01",
+					"read_wave_general_data_01_sub", "read_line", "freeh", "find_reals_in_line",
+					"gtprd", "wavln", "wavgen")
+			);
 	
 	@Test
 	void testSubProgramCalleesAndCallers() throws IOException, URISyntaxException {
@@ -90,5 +99,24 @@ class GraphTest {
 				assertTrue(correctCallees.equals(testCallees));
 			}	
 		}
+	}
+	
+	@Test
+	void testUnreferencedSubprograms() throws IOException, URISyntaxException {
+		/* Subprograms are referenced if they are called (directly or transitively)
+		 * from the main program.
+		 * It is assumed there is only one main program per system
+		 */
+		List<String> fileEntries = Files.readAllLines(Paths.get(getClass().getResource(SUBPROGRAM_DEPENDENCIES_FILE).toURI()));
+		assertNotNull(fileEntries);
+		assertEquals(NUM_ENTRIES, fileEntries.size());
+		
+		Parser parser = Parsers.indexableFortranParser(engine);
+		SDGraph graph = parseFiles(parser, SoftwareSystem.TEST.path());
+		assertNotNull(graph);
+
+		Set<String> testUnreferencedSubprograms = graph.getUnreferencedSubprograms();
+		assertNotNull(testUnreferencedSubprograms);
+		assertTrue(correctUnreferencedSubprograms.equals(testUnreferencedSubprograms));
 	}
 }

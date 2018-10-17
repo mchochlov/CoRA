@@ -186,4 +186,9 @@ final class GuavaBasedSDGraph implements SDGraph {
 	public int hashCode() {
 		return Objects.hash(this.subprograms, this.subprogramCallGraph, this.variableCallees);
 	}
+
+	@Override
+	public Set<String> getUnreferencedSubprograms() {
+		return new HashSet<>();
+	}
 }
