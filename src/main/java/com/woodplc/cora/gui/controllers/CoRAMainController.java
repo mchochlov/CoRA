@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
+import com.woodplc.cora.data.ProgramEntryNotFoundException;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.CallDependencyView;
@@ -44,6 +46,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SelectionMode;
@@ -52,11 +55,13 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class CoRAMainController {
 		
@@ -189,6 +194,26 @@ public class CoRAMainController {
 		initializeModule(moduleC, systemCDirFld, systemCLbl, systemCBottomLbl, systemCParseBtn, systemCProgressBar);
 		
 		searchTxtFld.setText(lastSearchQuery);
+		systemASubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleA);
+		     }
+		 });
+		
+		systemBSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleB);
+		     }
+		 });
+
+		systemCSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleC);
+		     }
+		 });
 		
 		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
 			while(x.next()) {
@@ -235,6 +260,28 @@ public class CoRAMainController {
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
 
+	}
+	
+	private class SubprogramCell extends ListCell<String> {
+
+		private final ModuleContainer module;
+	    public SubprogramCell(ModuleContainer module) { this.module = module; }
+	       
+	    @Override 
+	    protected void updateItem(String item, boolean empty) {
+	        super.updateItem(item, empty);
+	        setText(item);
+	        if (module == null || module.getModule() == null) return;
+	        
+	        Set<String> unreferencedSubprograms;
+			try {
+				unreferencedSubprograms = module.getModule().getGraph().getUnreferencedSubprograms();
+				setTextFill(unreferencedSubprograms.contains(item) ? Color.RED : Color.BLACK);
+			} catch (ProgramEntryNotFoundException e) {
+				e.printStackTrace();
+			}
+	        
+	    }
 	}
 	
 	private void setSelectedText(Label label, ListView<String> lv) {
@@ -335,6 +382,7 @@ public class CoRAMainController {
 				@Override
 				protected void succeeded() {
 					updateState(getValue(), ProgressBarColor.GREEN);
+					systemASubprogramList.refresh();
 				}
 				
 				private void updateState(ImmutableModule im, ProgressBarColor color) {
