@@ -7,14 +7,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
+import com.google.common.graph.Traverser;
 
 final class GuavaBasedSDGraph implements SDGraph {
 		
@@ -28,6 +32,8 @@ final class GuavaBasedSDGraph implements SDGraph {
 			.hashKeys()
 			.hashSetValues()
 			.build();
+	
+	private ImmutableSet<String> unreferencedSubprograms = null;
 	
 	GuavaBasedSDGraph() {}
 	
@@ -188,7 +194,24 @@ final class GuavaBasedSDGraph implements SDGraph {
 	}
 
 	@Override
-	public Set<String> getUnreferencedSubprograms() {
-		return new HashSet<>();
+	public Set<String> getUnreferencedSubprograms() throws ProgramEntryNotFoundException {
+
+		if (unreferencedSubprograms == null) {
+			Optional<SubProgram> startNode = subprograms
+					.stream()
+					.filter(s -> s instanceof Program)
+					.findFirst();
+			if (!startNode.isPresent()) throw new ProgramEntryNotFoundException();
+			Set<String> functions = subprograms.stream()
+					.filter(f -> f instanceof Function)
+					.map(SubProgram::name)
+					.collect(Collectors.toSet());
+			Traverser<String> traverser = Traverser.forGraph(subprogramCallGraph);
+			Set<String> referencedSubprograms = Sets.newHashSet(traverser.depthFirstPostOrder(startNode.get().name()));
+			unreferencedSubprograms = Sets.difference(subprogramCallGraph.nodes(), 
+					Sets.union(functions, referencedSubprograms))
+					.immutableCopy();
+		}
+		return unreferencedSubprograms;
 	}
 }

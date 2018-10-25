@@ -6,14 +6,16 @@ import java.util.Objects;
 
 import com.woodplc.cora.utils.Utils;
 
-public final class SubProgram {
+public abstract class SubProgram {
 
+	private final String module;
 	private final String subname;
 	private final int startLine;
 	private final int endLine;
 	private final Path path;	
 	
-	public SubProgram(String subname, int startLine, int endLine, Path path) {
+	public SubProgram(String module, String subname, int startLine, int endLine, Path path) {
+		Objects.requireNonNull(module);
 		Objects.requireNonNull(subname, "Subprogram name cannot be null!");
 		Objects.requireNonNull(path, "File path cannot be null!");
 		if (subname.isEmpty() ||
@@ -24,6 +26,7 @@ public final class SubProgram {
 			throw new IllegalArgumentException();
 		}
 
+		this.module = module;
 		this.subname = subname;
 		this.startLine = startLine;
 		this.endLine = endLine;
@@ -34,15 +37,32 @@ public final class SubProgram {
 		Objects.requireNonNull(str);
 		
 		String[] entry = str.split(Utils.RegEx.COMMA.regex());
-		if (entry.length != 4) {
+		if (entry.length != 6) {
 			throw new IllegalArgumentException();
 		}
-		
-		return new SubProgram(entry[0], 
-				Integer.parseInt(entry[1]), 
-				Integer.parseInt(entry[2]),
-				Paths.get(entry[3]));
+
+		return ofType(entry[5], entry[0],
+				entry[1], 
+				Integer.parseInt(entry[2]), 
+				Integer.parseInt(entry[3]),
+				Paths.get(entry[4]));
 	}
+	
+	public static SubProgram ofType(String type, String module, String name, 
+			int startLine, int endLine, Path fname) {
+		if (type.equals("program")) 
+			return new Program(module,
+				name, startLine, endLine, fname);
+		else if (type.equals("subroutine"))
+			return new Subroutine(module,
+				name, startLine, endLine, fname);
+		else if (type.equals("function"))
+			return new Function(module,
+				name, startLine, endLine, fname);
+		else throw new IllegalArgumentException();
+	}
+	
+	public String module() {return this.module;}
 	
 	public String name() {return this.subname;}
 	
@@ -52,13 +72,13 @@ public final class SubProgram {
 	
 	public Path path() {return this.path;}
 
-
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (!(o instanceof SubProgram)) return false;
 		SubProgram s = (SubProgram) o;
-		return subname.equals(s.subname) &&
+		return module.equals(s.module) &&
+				subname.equals(s.subname) &&
 				startLine == s.startLine &&
 				endLine == s.endLine &&
 				path.getFileName().equals(s.path.getFileName());
@@ -66,12 +86,12 @@ public final class SubProgram {
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(subname, startLine, endLine, path.getFileName());
+		return Objects.hash(module, subname, startLine, endLine, path.getFileName());
 	}
 
 	@Override
 	public String toString() {
-		return "SubProgram [subname=" + subname + ", startLine=" + startLine + ", endLine=" + endLine + ", path=" + path
+		return "SubProgram [module=" + module + ", subname=" + subname + ", startLine=" + startLine + ", endLine=" + endLine + ", path=" + path
 				+ "]";
 	}
 

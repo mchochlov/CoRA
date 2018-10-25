@@ -35,13 +35,11 @@ class GraphTest {
 	private static final String VARIABLE_CALLEES_FILE = "variable_callees.txt";
 	private static final int NUM_VARIABLE_MEMBERS = 2;
 	private static final Set<String> correctUnreferencedSubprograms = new HashSet<>(
-			Arrays.asList("lin_flex_joint_prop", "xloc", "mxout", "dllmain",
-					"initialiseids", "case_insensitive_compare",
-					"newstorage_fn", "set", "exampleprint_sub", "iprint",
-					"readwavegeneralmaxes01_fn", "read_wave_general_maxes_01",
-					"readwavegeneraldata01_fn", "read_wave_general_data_01",
-					"read_wave_general_data_01_sub", "read_line", "freeh", "find_reals_in_line",
-					"gtprd", "wavln", "wavgen")
+			Arrays.asList("lin_flex_joint_prop", "xloc", "initialiseids", "epslon8", "mxout", 
+					"initialiseids_sub", "set", "exampleset_sub", "exampleget_sub", "exampleprint_sub", 
+					"iprint", "read_wave_general_maxes_01", "read_wave_general_data_01", "clean", 
+					"set_sub", "print_sub", "read_wave_general_maxes_01_sub", "read_wave_general_data_01_sub", 
+					"read_line", "find_reals_in_line", "freeh", "gtprd", "wavln", "wavgen")
 			);
 	
 	@Test
@@ -102,7 +100,7 @@ class GraphTest {
 	}
 	
 	@Test
-	void testUnreferencedSubprograms() throws IOException, URISyntaxException {
+	void testUnreferencedSubprograms() throws IOException, URISyntaxException, ProgramEntryNotFoundException {
 		/* Subprograms are referenced if they are called (directly or transitively)
 		 * from the main program.
 		 * It is assumed there is only one main program per system

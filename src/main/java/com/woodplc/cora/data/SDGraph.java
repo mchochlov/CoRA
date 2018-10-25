@@ -38,5 +38,5 @@ public interface SDGraph {
 	
 	Map<String, Set<String>> getVariablesAndCallees(String subname);
 
-	Set<String> getUnreferencedSubprograms();
+	Set<String> getUnreferencedSubprograms() throws ProgramEntryNotFoundException;
 }

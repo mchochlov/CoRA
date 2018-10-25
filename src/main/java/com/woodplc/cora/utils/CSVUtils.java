@@ -35,7 +35,8 @@ public class CSVUtils {
 	}
 	
 	private static void printSubprograms(PrintWriter pw, Set<SubProgram> subs) {
-		subs.forEach(x -> pw.println(x.name() + RegEx.COMMA.regex() + 
+		subs.forEach(x -> pw.println(x.module() + RegEx.COMMA.regex() +
+				x.name() + RegEx.COMMA.regex() + 
 				x.startLine() + RegEx.COMMA.regex() + 
 				x.endLine() + RegEx.COMMA.regex() +
 				x.path()
