@@ -144,7 +144,7 @@
                         <Button fx:id="systemASearchBtn" mnemonicParsing="false" onAction="#systemASearch" text="%search_btn" />
                      </children>
                   </HBox>
-                  <TableView fx:id="systemASearchResultTbl" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
+                  <TableView fx:id="systemASearchResultTbl" onMouseClicked="#viewSubprogramCodeFromSearch" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
                     <columns>
                       <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
                         <TableColumn fx:id="systemAClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
@@ -173,7 +173,7 @@
                               <Label fx:id="systemABottomLbl" prefWidth="55.0" />
                            </children>
                         </HBox>
-                        <ListView fx:id="systemASubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                        <ListView fx:id="systemASubprogramList" onMouseClicked="#viewSubprogramCodeSystemA" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                            <contextMenu>
                               <ContextMenu>
                                 <items>
@@ -202,7 +202,7 @@
                               <Label fx:id="systemBBottomLbl" prefWidth="55.0" />
                            </children>
                         </HBox>
-                        <ListView fx:id="systemBSubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                        <ListView fx:id="systemBSubprogramList" onMouseClicked="#viewSubprogramCodeSystemB" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                            <contextMenu>
                               <ContextMenu>
                                  <items>
@@ -228,7 +228,7 @@
                               <Label fx:id="systemCBottomLbl" prefWidth="55.0" />
                            </children>
                         </HBox>
-                        <ListView fx:id="systemCSubprogramList" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                        <ListView fx:id="systemCSubprogramList" onMouseClicked="#viewSubprogramCodeSystemC" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                            <contextMenu>
                               <ContextMenu>
                                  <items>
