@@ -4,12 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -45,6 +45,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -54,6 +55,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
@@ -432,7 +434,7 @@ public class CoRAMainController {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
-		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms());
+		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms(), null);
 	}
 
 	@FXML
@@ -441,12 +443,12 @@ public class CoRAMainController {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
-		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms());
+		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms(), null);
     }
 	
 	@FXML
 	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms());
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms(), null);
 	}
 
 	@FXML
@@ -461,27 +463,27 @@ public class CoRAMainController {
 
 	@FXML
 	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms());
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms(), null);
 	}
 
 	@FXML
     void systemBAdjacentSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms());
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms(), null);
     }
 
     @FXML
     void systemBVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms());
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms(), null);
     }
 
     @FXML
     void systemCAdjacentSubprograms(ActionEvent event) throws IOException {
-    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms());
+    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms(), null);
     }
 
     @FXML
     void systemCVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms());
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms(), null);
     }
 
 	@FXML
@@ -506,7 +508,7 @@ public class CoRAMainController {
     }
 	
 	private void loadStage(Resource resource, String title, 
-			ModuleContainer module, ObservableList<String> fSubprograms) throws IOException {
+			ModuleContainer module, ObservableList<String> fSubprograms, Control control) throws IOException {
 		String selectedSubprogram = null;
 		switch(resource) {
 		case ADJACENT_FXML:
@@ -556,6 +558,25 @@ public class CoRAMainController {
 				return;
 			}
 			break;
+		case CODEVIEW_FXML:
+			if (control instanceof TableView<?>) {
+				TableView<SearchEntryView> tv = (TableView<SearchEntryView>) control;
+				if (tv.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = tv.getSelectionModel().getSelectedItem().getName();
+			} else if (control instanceof ListView<?>) {
+				ListView<String> lv = (ListView<String>)control;
+				if (lv.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = lv.getSelectionModel().getSelectedItem();
+			} else {
+				throw new IllegalArgumentException();
+			}
+			break;
 		default:
 			throw new IllegalArgumentException();
 		}
@@ -564,6 +585,7 @@ public class CoRAMainController {
 				
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(resource.path()), Main.getResources());
 		Controller controller = getControllerForResource(resource, selectedSubprogram, fSubprograms, module);
+		if (controller == null) return;
 		loader.setController(controller);
 		Pane root = (Pane) loader.load();
 		Scene scene = new Scene(root);
@@ -589,12 +611,26 @@ public class CoRAMainController {
 				fSubprograms,
 				moduleA.getModule().getEngine(),
 				module.getModule().getEngine());
+		case CODEVIEW_FXML:
+		return constructCVController(selectedSubprogram, fSubprograms, module);
 		default:
 			throw new IllegalArgumentException();
 		}
 		
 	}
 	
+	private Controller constructCVController(String selectedSubprogram, ObservableList<String> fSubprograms, ModuleContainer module) {
+		Optional<SubProgram> subprogram = module.getModule().getGraph().subprograms()
+			.stream()
+			.filter(s -> s.name().equals(selectedSubprogram))
+			.findFirst();
+		if (!subprogram.isPresent()) {
+			illegalStateAlert.showAndWait();
+			return null;
+		}
+		return new CodeViewController(subprogram.get(), selectedSubprogram, fSubprograms);
+	}
+
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
 			ObservableList<String> fSubprograms, ModuleContainer module) {
 		ObservableList<CallDependencyView> callers = module.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
@@ -741,6 +777,34 @@ public class CoRAMainController {
     @FXML
     void locSystemC(ActionEvent event) {
     	calculateLoc(locCLbl, feature.systemCSubprograms(), moduleC.getModule().getGraph());
+    }
+    
+    @FXML
+    void viewSubprogramCodeFromSearch(MouseEvent event) throws IOException {
+    	if (event.getClickCount() == 2) {
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASearchResultTbl);
+    	}
+    }
+
+    @FXML
+    void viewSubprogramCodeSystemA(MouseEvent event) throws IOException {
+    	if (event.getClickCount() == 2) {
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASubprogramList);
+    	}
+    }
+
+    @FXML
+    void viewSubprogramCodeSystemB(MouseEvent event) throws IOException {
+    	if (event.getClickCount() == 2) {
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleB, feature.systemBSubprograms(), systemBSubprogramList);
+    	}
+    }
+
+    @FXML
+    void viewSubprogramCodeSystemC(MouseEvent event) throws IOException {
+    	if (event.getClickCount() == 2) {
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleC, feature.systemCSubprograms(), systemCSubprogramList);
+    	}
     }
     
     private void calculateLoc(Label label, ObservableList<String> subprogramNames, SDGraph graph) {
