@@ -33,6 +33,7 @@ import com.woodplc.cora.grammar.FuzzyFortranParser;
 import com.woodplc.cora.grammar.FuzzyFortranParser.CallStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfOneLineContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfStatementContext;
+import com.woodplc.cora.grammar.FuzzyFortranParser.ModuleContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.SubprogramContext;
 import com.woodplc.cora.ir.IREngine;
 
@@ -100,12 +101,19 @@ class ANTLRFortranParser implements Parser {
 		
 		@Override
 		public void exitSubprogram(SubprogramContext ctx) {
-			SubProgram subprogram = new SubProgram(ctx.ID(0).getText(), 
+			String module = "";
+			if (ctx.getParent() != null && ctx.getParent() instanceof ModuleContext) {
+				ModuleContext mc = (ModuleContext) ctx.getParent();
+				module = mc.ID(0).getText();
+			}
+			SubProgram subprogram = SubProgram.ofType(ctx.subType(0).getText(),
+					module, ctx.ID(0).getText(), 
 					ctx.getStart().getLine(), 
 					ctx.getStop().getLine(), 
 					fname);
+			
 			graph.addSubprogramAndCallees(subprogram, new HashSet<>(localCallees));
-			engine.index(ctx.ID(0).getText(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
+			engine.index(subprogram.name(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
 			localCallees.clear();
 		}
 

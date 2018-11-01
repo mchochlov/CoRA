@@ -36,11 +36,14 @@ public final class JSONUtils {
 			.create();
 	private static final Gson FEATURE_TO_GSON = new GsonBuilder()
 			.serializeNulls()
-			.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
+			//.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
+			.registerTypeHierarchyAdapter(SubProgram.class, new SubProgramAdapter())
 			.setPrettyPrinting()
 			.create();
 
 	private enum JsonFieldNames {
+		TYPE("type"),
+		MODULE("module"),
 		SUBNAME("subname"),
 		STARTLINE("start"),
 		ENDLINE("end"),
@@ -119,12 +122,18 @@ public final class JSONUtils {
 			reader.beginArray();
 			while(reader.hasNext()) {
 				reader.beginObject();
+				String type = null;
+				String module = null;
 				String subname = null;
 				int startLine = 0, endLine = 0;
 				Path path = null;
 			    while (reader.hasNext()) {
 			    	String name = reader.nextName();
-			    	if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
+			    	if (name.equals(JsonFieldNames.TYPE.fieldName)) {
+			    		type = reader.nextString();
+			    	} else if (name.equals(JsonFieldNames.MODULE.fieldName)) {
+			    		module = reader.nextString();
+			    	} else if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
 			    		subname = reader.nextString();
 			    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
 			    		startLine = reader.nextInt();
@@ -137,7 +146,7 @@ public final class JSONUtils {
 			    	}
 			    }
 			    reader.endObject();
-			    subprograms.add(new SubProgram(subname, startLine, endLine, path));				 
+			    subprograms.add(SubProgram.ofType(type, module, subname, startLine, endLine, path));				 
 			}
 			reader.endArray();
 			
@@ -224,6 +233,8 @@ public final class JSONUtils {
 			
 			for (SubProgram subprogram : subprograms) {
 				writer.beginObject();
+				writer.name(JsonFieldNames.TYPE.fieldName).value(subprogram.getClass().getSimpleName().toLowerCase());
+				writer.name(JsonFieldNames.MODULE.fieldName).value(subprogram.module());
 				writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
 				writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
 				writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
@@ -311,6 +322,60 @@ public final class JSONUtils {
 		        return null;
 		    }
 			return Paths.get(reader.nextString());
+		}
+		
+	}
+	
+	private static class SubProgramAdapter extends TypeAdapter<SubProgram> {
+
+		@Override
+		public void write(JsonWriter writer, SubProgram subprogram) throws IOException {
+			if (subprogram == null) {
+				writer.nullValue();
+				return;
+			}
+			writer.beginObject();
+			writer.name(JsonFieldNames.TYPE.fieldName).value(subprogram.getClass().getSimpleName().toLowerCase());
+			writer.name(JsonFieldNames.MODULE.fieldName).value(subprogram.module());
+			writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
+			writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
+			writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
+			writer.name(JsonFieldNames.PATH.fieldName).value(subprogram.path().toString());
+			writer.endObject();
+		}
+
+		@Override
+		public SubProgram read(JsonReader reader) throws IOException {
+			if (reader.peek() == JsonToken.NULL) {
+		        reader.nextNull();
+		        return null;
+		    }
+			reader.beginObject();
+			String type = null;
+			String module = null;
+			String subname = null;
+			int startLine = 0, endLine = 0;
+			Path path = null;
+		    while (reader.hasNext()) {
+		    	String name = reader.nextName();
+		    	if (name.equals(JsonFieldNames.TYPE.fieldName)) {
+		    		type = reader.nextString();
+		    	} else if (name.equals(JsonFieldNames.MODULE.fieldName)) {
+		    		module = reader.nextString();
+		    	} else if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
+		    		subname = reader.nextString();
+		    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
+		    		startLine = reader.nextInt();
+		    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
+		    		endLine = reader.nextInt();
+		    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
+		    		path = Paths.get(reader.nextString());
+		    	} else {
+		    		reader.skipValue();
+		    	}
+		    }
+		    reader.endObject();
+		    return SubProgram.ofType(type, module, subname, startLine, endLine, path);	
 		}
 		
 	}

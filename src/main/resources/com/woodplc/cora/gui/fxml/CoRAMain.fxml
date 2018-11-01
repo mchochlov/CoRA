@@ -206,6 +206,8 @@
                            <contextMenu>
                               <ContextMenu>
                                  <items>
+                                    <MenuItem mnemonicParsing="false" onAction="#systemBAdjacentSubprograms" text="%adj_sub_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#systemBVarControlledSubprograms" text="%var_control_item" />
                                     <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemB" text="%remove_item" />
                                  </items>
                               </ContextMenu>
@@ -230,6 +232,8 @@
                            <contextMenu>
                               <ContextMenu>
                                  <items>
+                                    <MenuItem mnemonicParsing="false" onAction="#systemCAdjacentSubprograms" text="%adj_sub_item" />
+                                    <MenuItem mnemonicParsing="false" onAction="#systemCVarControlledSubprograms" text="%var_control_item" />
                                     <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemC" text="%remove_item" />
                                  </items>
                               </ContextMenu>

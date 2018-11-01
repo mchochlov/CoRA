@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.NumberFormat;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
 import com.woodplc.cora.data.ModuleContainer;
+import com.woodplc.cora.data.ProgramEntryNotFoundException;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.CallDependencyView;
@@ -44,6 +46,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SelectionMode;
@@ -52,11 +55,13 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class CoRAMainController {
 		
@@ -189,6 +194,26 @@ public class CoRAMainController {
 		initializeModule(moduleC, systemCDirFld, systemCLbl, systemCBottomLbl, systemCParseBtn, systemCProgressBar);
 		
 		searchTxtFld.setText(lastSearchQuery);
+		systemASubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleA);
+		     }
+		 });
+		
+		systemBSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleB);
+		     }
+		 });
+
+		systemCSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
+		     @Override 
+		     public ListCell<String> call(ListView<String> list) {
+		         return new SubprogramCell(moduleC);
+		     }
+		 });
 		
 		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
 			while(x.next()) {
@@ -235,6 +260,28 @@ public class CoRAMainController {
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
 
+	}
+	
+	private class SubprogramCell extends ListCell<String> {
+
+		private final ModuleContainer module;
+	    public SubprogramCell(ModuleContainer module) { this.module = module; }
+	       
+	    @Override 
+	    protected void updateItem(String item, boolean empty) {
+	        super.updateItem(item, empty);
+	        setText(item);
+	        if (module == null || module.getModule() == null) return;
+	        
+	        Set<String> unreferencedSubprograms;
+			try {
+				unreferencedSubprograms = module.getModule().getGraph().getUnreferencedSubprograms();
+				setTextFill(unreferencedSubprograms.contains(item) ? Color.RED : Color.BLACK);
+			} catch (ProgramEntryNotFoundException e) {
+				e.printStackTrace();
+			}
+	        
+	    }
 	}
 	
 	private void setSelectedText(Label label, ListView<String> lv) {
@@ -335,6 +382,7 @@ public class CoRAMainController {
 				@Override
 				protected void succeeded() {
 					updateState(getValue(), ProgressBarColor.GREEN);
+					systemASubprogramList.refresh();
 				}
 				
 				private void updateState(ImmutableModule im, ProgressBarColor color) {
@@ -415,7 +463,27 @@ public class CoRAMainController {
 	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
 		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms());
 	}
-	
+
+	@FXML
+    void systemBAdjacentSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms());
+    }
+
+    @FXML
+    void systemBVarControlledSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms());
+    }
+
+    @FXML
+    void systemCAdjacentSubprograms(ActionEvent event) throws IOException {
+    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms());
+    }
+
+    @FXML
+    void systemCVarControlledSubprograms(ActionEvent event) throws IOException {
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms());
+    }
+
 	@FXML
     void removeItemsSystemA(ActionEvent event) {
 		removeItems(systemASubprogramList, feature.systemASubprograms());
@@ -439,24 +507,61 @@ public class CoRAMainController {
 	
 	private void loadStage(Resource resource, String title, 
 			ModuleContainer module, ObservableList<String> fSubprograms) throws IOException {
-		if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
-			multipleSelectionAlert.showAndWait();
-			return;
+		String selectedSubprogram = null;
+		switch(resource) {
+		case ADJACENT_FXML:
+		case VAR_FXML:
+			if (module.equals(moduleA)) {
+				if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+			}
+			
+			if (module.equals(moduleB)) {
+				if (systemBSubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemBSubprogramList.getSelectionModel().getSelectedItem();
+			}
+			
+			if (module.equals(moduleC)) {
+				if (systemCSubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+					multipleSelectionAlert.showAndWait();
+					return;
+				}
+				selectedSubprogram = systemCSubprogramList.getSelectionModel().getSelectedItem();
+			}
+			if (!module.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
+				illegalStateAlert.showAndWait();
+				return;
+			}
+
+			break;
+
+		case CLONES_FXML:
+			if (moduleA.getModule() == null || module.getModule() == null) {
+				graphNotFoundAlert.showAndWait();
+				return;
+			}
+			if (systemASubprogramList.getSelectionModel().getSelectedItems().size() > 1) {
+				multipleSelectionAlert.showAndWait();
+				return;
+			}
+			selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+			if (!moduleA.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
+				illegalStateAlert.showAndWait();
+				return;
+			}
+			break;
+		default:
+			throw new IllegalArgumentException();
 		}
-		
-		String selectedSubprogram = systemASubprogramList.getSelectionModel().getSelectedItem();
+
 		if (selectedSubprogram == null || selectedSubprogram.isEmpty()) {return;}
-		
-		if (moduleA.getModule() == null || module.getModule() == null) {
-			graphNotFoundAlert.showAndWait();
-			return;
-		}
-		
-		if (!moduleA.getModule().getGraph().containsSubprogram(selectedSubprogram)) {
-			illegalStateAlert.showAndWait();
-			return;
-		}
-		
+				
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(resource.path()), Main.getResources());
 		Controller controller = getControllerForResource(resource, selectedSubprogram, fSubprograms, module);
 		loader.setController(controller);
@@ -475,9 +580,9 @@ public class CoRAMainController {
 			ObservableList<String> fSubprograms, ModuleContainer module) {
 		switch(resource) {
 		case ADJACENT_FXML:
-		return constructASController(selectedSubprogram, fSubprograms);
+		return constructASController(selectedSubprogram, fSubprograms, module);
 		case VAR_FXML:
-		return constructVCController(selectedSubprogram, fSubprograms);
+		return constructVCController(selectedSubprogram, fSubprograms, module);
 		case CLONES_FXML:
 		return new ClonesController(
 				selectedSubprogram,
@@ -491,26 +596,26 @@ public class CoRAMainController {
 	}
 	
 	private AdjacentSubprogramsController constructASController(String selectedSubprogram,
-			ObservableList<String> fSubprograms) {
-		ObservableList<CallDependencyView> callers = moduleA.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
+			ObservableList<String> fSubprograms, ModuleContainer module) {
+		ObservableList<CallDependencyView> callers = module.getModule().getGraph().getSubprogramCallers(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanOut(s), s))
+				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanOut(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 
-		ObservableList<CallDependencyView> callees = moduleA.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
+		ObservableList<CallDependencyView> callees = module.getModule().getGraph().getSubprogramCallees(selectedSubprogram)
 				.stream()
 				.filter(s -> !fSubprograms.contains(s))
-				.map(s -> new CallDependencyView(moduleA.getModule().getGraph().getFanIn(s), s))
+				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
 		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
 	}
 	
 	private VariableControlledController constructVCController(String selectedSubprogram,
-			ObservableList<String> fSubprograms) {
+			ObservableList<String> fSubprograms, ModuleContainer module) {
 		final Set<String> duplicates = new HashSet<>();
-		Map<String, Set<String>> variables = moduleA.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
+		Map<String, Set<String>> variables = module.getModule().getGraph().getVariablesAndCallees(selectedSubprogram)
 			.entrySet()
 			.stream()
 			.map(x -> {

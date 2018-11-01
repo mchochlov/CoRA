@@ -1,8 +1,10 @@
 grammar FuzzyFortran;
 
-inputFile : ( subprogram | . )*
+inputFile : ( subprogram | module | . )*
 	//{System.out.println("subprogram: " + $subprogram.start);}
 ;
+
+module : 'module' ID ( subprogram | . ) * 'end' ('module' (ID)?)?  (NL|EOF);
 
 subprogram : ( COMMENT | OLD_COMMENT | EMPTY_LINE )* prefix* subType ID body 'end' (subType (ID)?)? (NL|EOF)
 	//{System.out.println("subprogram: " + $start+ $stop);}
@@ -12,6 +14,8 @@ subprogram : ( COMMENT | OLD_COMMENT | EMPTY_LINE )* prefix* subType ID body 'en
 body : ( ifStatement | ifOneLine | callStatement | . )*?
 	//{System.out.println("body: " + $ctx.start);}
 ;
+
+//useStatement : 'use' ID (',' 'only' ':' ID (',' ID | NL | '&')* ) ?;
 
 callStatement :
 	'call' (callPrefix)? ID ('(')?

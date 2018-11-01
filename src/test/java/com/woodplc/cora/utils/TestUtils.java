@@ -87,16 +87,16 @@ public final class TestUtils {
 
 	public static FeatureView fullyInitializedFeatureView() {
 		Set<SubProgram> systemA = new HashSet<>(Arrays.asList(
-				new SubProgram("subprogram_1", 1, 5, Paths.get("path_1")),
-				new SubProgram("subprogram_2", 10, 100, Paths.get("path_2"))
+				SubProgram.ofType("subroutine", "module1", "subprogram_1", 1, 5, Paths.get("path_1")),
+				SubProgram.ofType("program", "", "subprogram_2", 10, 100, Paths.get("path_2"))
 			));
 		Set<SubProgram> systemB = new HashSet<>(Arrays.asList(
-				new SubProgram("subprogram_3", 6, 7, Paths.get("path_3"))
+				SubProgram.ofType("function", "module2", "subprogram_3", 6, 7, Paths.get("path_3"))
 			));
 		Set<SubProgram> systemC = new HashSet<>(Arrays.asList(
-				new SubProgram("subprogram_4", 10, 15, Paths.get("path_4")),
-				new SubProgram("subprogram_5", 25, 30, Paths.get("path_5")),
-				new SubProgram("subprogram_6", 25, 30, Paths.get("path_6"))
+				SubProgram.ofType("subroutine", "module2", "subprogram_4", 10, 15, Paths.get("path_4")),
+				SubProgram.ofType("function", "", "subprogram_5", 25, 30, Paths.get("path_5")),
+				SubProgram.ofType("subroutine", "module_5", "subprogram_6", 25, 30, Paths.get("path_6"))
 			));
 		return new FeatureView(systemA, systemB, systemC);
 	}
