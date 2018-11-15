@@ -7,10 +7,10 @@
 	<name>Code Reunification Application</name>
 
 	<properties>
-		<lucene.version>7.3.0</lucene.version>
-		<antlr.version>4.7</antlr.version>
-		<jupiter.version>5.1.0</jupiter.version>
-		<junit.platform.version>1.1.0</junit.platform.version>
+		<lucene.version>7.5.0</lucene.version>
+		<antlr.version>4.7.1</antlr.version>
+		<jupiter.version>5.3.1</jupiter.version>
+		<openjfx.version>11.0.1</openjfx.version>
 	</properties>
 	
 	<repositories>
@@ -31,15 +31,15 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.7.0</version>
+				<version>3.8.0</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
+					<release>11</release>
 				</configuration>
 			</plugin>
 			<!-- https://mvnrepository.com/artifact/com.zenjava/javafx-maven-plugin -->
-			<plugin>
+<!-- 			<plugin>
 				<groupId>com.zenjava</groupId>
 				<artifactId>javafx-maven-plugin</artifactId>
 				<version>8.8.3</version>
@@ -48,16 +48,24 @@
 					<mainClass>com.woodplc.cora.app.Main</mainClass>
 				</configuration>
 			</plugin>
+ -->		<plugin>
+		        <groupId>org.codehaus.mojo</groupId>
+		        <artifactId>exec-maven-plugin</artifactId>
+		        <version>1.6.0</version>
+		        <executions>
+		          <execution>
+		            <goals>
+		              <goal>java</goal>
+		            </goals>
+		          </execution>
+		        </executions>
+		        <configuration>
+		          <mainClass>com.woodplc.cora.app.Main</mainClass>
+		        </configuration>
+   		      </plugin>
 			<plugin>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.19.1</version>
-				<dependencies>
-					<dependency>
-						<groupId>org.junit.platform</groupId>
-						<artifactId>junit-platform-surefire-provider</artifactId>
-						<version>${junit.platform.version}</version>
-					</dependency>
-				</dependencies>
+				<version>2.22.0</version>
 			</plugin>
 			<plugin>
         		<groupId>org.antlr</groupId>
@@ -74,6 +82,41 @@
         			<sourceDirectory>src/main/resources</sourceDirectory>
         		</configuration>
         	</plugin>
+        	<plugin>
+			    <groupId>org.apache.maven.plugins</groupId>
+			    <artifactId>maven-jar-plugin</artifactId>
+			    <configuration>
+			        <archive>
+			            <manifest>
+			                <addClasspath>true</addClasspath>
+			                <classpathPrefix>lib/</classpathPrefix>
+			                <mainClass>
+			                    com.woodplc.cora.app.Main
+			                </mainClass>
+			            </manifest>
+			        </archive>
+			    </configuration>
+			</plugin>
+        	<plugin>
+		        <groupId>org.apache.maven.plugins</groupId>
+		        <artifactId>maven-dependency-plugin</artifactId>
+		        <version>3.1.1</version>
+		        <executions>
+		          	<execution>
+		            	<id>copy-dependencies</id>
+		            	<phase>package</phase>
+		            	<goals>
+		              		<goal>copy-dependencies</goal>
+		            	</goals>
+		            	<configuration>
+		              		<outputDirectory>${project.build.directory}/lib</outputDirectory>
+		              		<overWriteReleases>false</overWriteReleases>
+		              		<overWriteSnapshots>false</overWriteSnapshots>
+		              		<overWriteIfNewer>true</overWriteIfNewer>
+		            	</configuration>
+		          	</execution>
+		        </executions>
+		    </plugin>
 		</plugins>
 	</build>
 
@@ -91,12 +134,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.junit.platform</groupId>
-			<artifactId>junit-platform-launcher</artifactId>
-			<version>${junit.platform.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
       		<groupId>org.antlr</groupId>
       		<artifactId>antlr4-runtime</artifactId>
       		<version>${antlr.version}</version>
@@ -104,13 +141,13 @@
     	<dependency>
   			<groupId>com.google.guava</groupId>
   			<artifactId>guava</artifactId>
-  			<version>24.1-jre</version>
+  			<version>27.0-jre</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-core</artifactId>
-			<version>2.11.0</version>
+			<version>2.23.0</version>
 			<scope>test</scope>
 		</dependency>
 		
@@ -144,6 +181,19 @@
     		<groupId>org.fxmisc.richtext</groupId>
     		<artifactId>richtextfx</artifactId>
     		<version>0.9.1</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.openjfx/javafx-controls -->
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-controls</artifactId>
+		    <version>${openjfx.version}</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-fxml</artifactId>
+		    <version>${openjfx.version}</version>
 		</dependency>
 		
 	</dependencies>
