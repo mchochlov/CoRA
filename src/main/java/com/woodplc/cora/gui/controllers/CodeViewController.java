@@ -3,7 +3,6 @@ package com.woodplc.cora.gui.controllers;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.fxmisc.richtext.CodeArea;
@@ -11,11 +10,9 @@ import org.fxmisc.richtext.LineNumberFactory;
 
 import com.woodplc.cora.data.SubProgram;
 
-import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 
 class CodeViewController extends Controller {
