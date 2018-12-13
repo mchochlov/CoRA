@@ -8,6 +8,7 @@ import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -59,6 +60,7 @@ public class Main extends Application {
 			Scene scene = new Scene(root);
 			scene.getStylesheets().add(getClass().getResource(Resource.CSS.path).toExternalForm());
 			primaryStage.setScene(scene);
+			primaryStage.setOnCloseRequest(e -> Platform.exit());
 			primaryStage.show();
 		} catch(Exception e) {
 			e.printStackTrace();
@@ -72,7 +74,7 @@ public class Main extends Application {
 	public static ResourceBundle getResources() {
 		return resources;
 	}
-	
+		
 	@Override
 	public void stop() throws Exception {
 		super.stop();

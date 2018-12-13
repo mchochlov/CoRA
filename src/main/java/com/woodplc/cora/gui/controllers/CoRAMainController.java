@@ -434,7 +434,7 @@ public class CoRAMainController {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
-		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms(), null);
+		loadStage(Resource.CLONES_FXML, "clones_b_title", moduleB, feature.systemBSubprograms(), null, Modality.APPLICATION_MODAL);
 	}
 
 	@FXML
@@ -443,12 +443,12 @@ public class CoRAMainController {
 			graphNotFoundAlert.showAndWait();
 			return;
 		}
-		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms(), null);
+		loadStage(Resource.CLONES_FXML, "clones_c_title", moduleC, feature.systemCSubprograms(), null, Modality.APPLICATION_MODAL);
     }
 	
 	@FXML
 	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms(), null);
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms(), null, Modality.APPLICATION_MODAL);
 	}
 
 	@FXML
@@ -463,27 +463,27 @@ public class CoRAMainController {
 
 	@FXML
 	void systemAVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms(), null);
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleA, feature.systemASubprograms(), null, Modality.APPLICATION_MODAL);
 	}
 
 	@FXML
     void systemBAdjacentSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms(), null);
+		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleB, feature.systemBSubprograms(), null, Modality.APPLICATION_MODAL);
     }
 
     @FXML
     void systemBVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms(), null);
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleB, feature.systemBSubprograms(), null, Modality.APPLICATION_MODAL);
     }
 
     @FXML
     void systemCAdjacentSubprograms(ActionEvent event) throws IOException {
-    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms(), null);
+    	loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleC, feature.systemCSubprograms(), null, Modality.APPLICATION_MODAL);
     }
 
     @FXML
     void systemCVarControlledSubprograms(ActionEvent event) throws IOException {
-		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms(), null);
+		loadStage(Resource.VAR_FXML, "var_controlled_title", moduleC, feature.systemCSubprograms(), null, Modality.APPLICATION_MODAL);
     }
 
 	@FXML
@@ -508,7 +508,8 @@ public class CoRAMainController {
     }
 	
 	private void loadStage(Resource resource, String title, 
-			ModuleContainer module, ObservableList<String> fSubprograms, Control control) throws IOException {
+			ModuleContainer module, ObservableList<String> fSubprograms, Control control,
+			Modality modality) throws IOException {
 		String selectedSubprogram = null;
 		switch(resource) {
 		case ADJACENT_FXML:
@@ -594,8 +595,8 @@ public class CoRAMainController {
 		Stage stage = new Stage();
 		stage.setScene(scene);
 		stage.setTitle(Main.getResources().getString(title));
-		stage.initModality(Modality.APPLICATION_MODAL);
-		stage.showAndWait();
+		stage.initModality(modality);
+		stage.show();
 	}
 	
 	private Controller getControllerForResource(Resource resource, String selectedSubprogram,
@@ -782,28 +783,28 @@ public class CoRAMainController {
     @FXML
     void viewSubprogramCodeFromSearch(MouseEvent event) throws IOException {
     	if (event.getClickCount() == 2) {
-    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASearchResultTbl);
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASearchResultTbl, Modality.WINDOW_MODAL);
     	}
     }
 
     @FXML
     void viewSubprogramCodeSystemA(MouseEvent event) throws IOException {
     	if (event.getClickCount() == 2) {
-    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASubprogramList);
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleA, feature.systemASubprograms(), systemASubprogramList, Modality.WINDOW_MODAL);
     	}
     }
 
     @FXML
     void viewSubprogramCodeSystemB(MouseEvent event) throws IOException {
     	if (event.getClickCount() == 2) {
-    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleB, feature.systemBSubprograms(), systemBSubprogramList);
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleB, feature.systemBSubprograms(), systemBSubprogramList, Modality.WINDOW_MODAL);
     	}
     }
 
     @FXML
     void viewSubprogramCodeSystemC(MouseEvent event) throws IOException {
     	if (event.getClickCount() == 2) {
-    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleC, feature.systemCSubprograms(), systemCSubprogramList);
+    		loadStage(Resource.CODEVIEW_FXML, "code_view", moduleC, feature.systemCSubprograms(), systemCSubprogramList, Modality.WINDOW_MODAL);
     	}
     }
     
