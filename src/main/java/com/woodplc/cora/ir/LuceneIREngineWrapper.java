@@ -37,6 +37,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
 import com.woodplc.cora.app.Main.Resource;
+import com.woodplc.cora.data.ProgramEntryNotFoundException;
 
 final class LuceneIREngineWrapper implements IREngine {
 	
@@ -173,7 +174,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	}
 
 	@Override
-	public List<String> getDocumentTermVector(String subname) {
+	public List<String> getDocumentTermVector(String subname) throws ProgramEntryNotFoundException {
 		if (subname == null || subname.isEmpty()) {
 			throw new IllegalArgumentException();
 		}
@@ -186,7 +187,7 @@ final class LuceneIREngineWrapper implements IREngine {
 			ScoreDoc[] hits = searcher.search(query, MAX_HITS).scoreDocs;
 			
 			if (hits.length != 1) {
-				throw new IllegalStateException();
+				throw new ProgramEntryNotFoundException();
 			}
 			
 			Terms terms = searcher.getIndexReader().getTermVector(hits[0].doc, Fields.DATA.name());

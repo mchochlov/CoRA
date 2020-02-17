@@ -244,10 +244,12 @@
                   <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0">
                      <children>
                         <Label text="%ref_cases" />
-                        <TableView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                        <TableView fx:id="refactoringCaseTbl" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
                           <columns>
-                            <TableColumn prefWidth="75.0" text="%case.name" />
-                            <TableColumn prefWidth="494.0" text="%case.instances" />
+                            <TableColumn fx:id="caseClmnName" prefWidth="75.0" text="%case.name" />
+                            <TableColumn fx:id="flClmnName" prefWidth="153.33331298828125" text="%case.fl" />
+                              <TableColumn fx:id="drClmnName" minWidth="0.0" prefWidth="114.6666259765625" text="%case.dr" />
+                              <TableColumn fx:id="plClmnName" prefWidth="378.3333740234375" text="%case.pl" />
                           </columns>
                         </TableView>
                      </children>

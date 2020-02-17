@@ -3,16 +3,18 @@ package com.woodplc.cora.data;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
@@ -34,6 +36,7 @@ final class GuavaBasedSDGraph implements SDGraph {
 			.build();
 	
 	private ImmutableSet<String> unreferencedSubprograms = null;
+	private ImmutableSet<String> externalSubprograms = null;
 	
 	GuavaBasedSDGraph() {}
 	
@@ -202,6 +205,7 @@ final class GuavaBasedSDGraph implements SDGraph {
 					.filter(s -> s instanceof Program)
 					.findFirst();
 			if (!startNode.isPresent()) throw new ProgramEntryNotFoundException();
+
 			Set<String> functions = subprograms.stream()
 					.filter(f -> f instanceof Function)
 					.map(SubProgram::name)
@@ -213,5 +217,46 @@ final class GuavaBasedSDGraph implements SDGraph {
 					.immutableCopy();
 		}
 		return unreferencedSubprograms;
+	}
+
+	@Override
+	public Set<String> getExternalSubprograms() throws ProgramEntryNotFoundException {
+		if (externalSubprograms == null) {
+			Set<String> internalSubprograms = subprograms.stream()
+					.map(s -> s.name())
+					.collect(Collectors.toSet());
+			externalSubprograms = Sets.difference(subprogramCallGraph.nodes(), 
+					internalSubprograms)
+					.immutableCopy();
+		}
+		return externalSubprograms;
+	}
+
+	@Override
+	public void printSubgraph(Set<String> subGraphNodes) {
+		MutableGraph<String> mGraph = com.google.common.graph.Graphs.inducedSubgraph(subprogramCallGraph, subGraphNodes);
+		for (String node : mGraph.nodes()) {
+			if (mGraph.predecessors(node).isEmpty()) {
+				Deque<String> queue = new LinkedList<>();
+				queue.add(node);
+				int level = 0;
+				while (!queue.isEmpty()) {
+					System.out.print(++level + " ");
+					int qLen = queue.size();
+					for (int i = 0; i < qLen; i++) {
+						String n = queue.pollLast();
+						if(!subprogramCallGraph.predecessors(n).equals(mGraph.predecessors(n))) {
+							System.out.print("Public ");
+						}
+						System.out.print(n + " ");
+						for (String s : mGraph.successors(n)) {
+							queue.addFirst(s);
+						}
+					}
+					System.out.println("\n");
+				}
+			}
+		}
+		
 	}
 }

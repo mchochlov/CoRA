@@ -1,5 +1,6 @@
 package com.woodplc.cora.gui.controllers;
 
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Objects;
@@ -64,7 +65,7 @@ class CodeViewController extends Controller {
 		
 		@Override
 		protected List<String> call() throws Exception {
-			return Files.lines(this.subprogram.path())
+			return Files.lines(this.subprogram.path(), Charset.defaultCharset())
 					//.limit(this.subprogram.endLine())
 					//.skip(this.subprogram.startLine())
 					.collect(Collectors.toList());

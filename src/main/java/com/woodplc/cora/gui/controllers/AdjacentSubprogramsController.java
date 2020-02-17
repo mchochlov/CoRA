@@ -1,8 +1,10 @@
 package com.woodplc.cora.gui.controllers;
 
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.gui.model.CallDependencyView;
 
 import javafx.collections.ObservableList;
@@ -18,6 +20,8 @@ class AdjacentSubprogramsController extends Controller {
 	
 	private final ObservableList<CallDependencyView> callers;
 	private final ObservableList<CallDependencyView> callees;
+	private final String path;
+	private final Feature feature;
 	
 	@FXML
     private Label callersLbl;
@@ -40,10 +44,12 @@ class AdjacentSubprogramsController extends Controller {
     private TableColumn<CallDependencyView, String> calleeClmn;
 	
 	AdjacentSubprogramsController(String subname, ObservableList<String> systemSubprograms,
-			ObservableList<CallDependencyView> callers, ObservableList<CallDependencyView> callees) {
+			ObservableList<CallDependencyView> callers, ObservableList<CallDependencyView> callees, String path, Feature feature) {
 		super(subname, systemSubprograms);
 		this.callers = Objects.requireNonNull(callers);
 		this.callees = Objects.requireNonNull(callees);
+		this.path = Objects.requireNonNull(path);
+		this.feature = Objects.requireNonNull(feature);
 	}
 	
 	@FXML 
@@ -76,6 +82,7 @@ class AdjacentSubprogramsController extends Controller {
 					.stream()
 					.map(CallDependencyView::getName)
 					.collect(Collectors.toSet()));
+			feature.addRefactoringCasesFromAdj(this.path, selectedCallers);
 			callers.removeAll(selectedCallers);
 		}
 		
@@ -84,6 +91,7 @@ class AdjacentSubprogramsController extends Controller {
 					.stream()
 					.map(CallDependencyView::getName)
 					.collect(Collectors.toSet()));
+			feature.addRefactoringCasesFromAdj(this.path, selectedCallees);
 			callees.removeAll(selectedCallees);
 		}
     }
