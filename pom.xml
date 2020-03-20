@@ -196,5 +196,33 @@
 		    <version>${openjfx.version}</version>
 		</dependency>
 		
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-controls</artifactId>
+		    <version>${openjfx.version}</version>
+		    <classifier>linux</classifier>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-fxml</artifactId>
+		    <version>${openjfx.version}</version>
+		    <classifier>linux</classifier>
+		</dependency>
+		
+		<dependency>
+        	<groupId>org.openjfx</groupId>
+        	<artifactId>javafx-graphics </artifactId>
+        	<version>11</version>
+        	<classifier>linux</classifier>
+        </dependency>
+        		
+        <dependency>
+        	<groupId>org.openjfx</groupId>
+        	<artifactId>javafx-base </artifactId>
+        	<version>11</version>
+        	<classifier>linux</classifier>
+    	</dependency>
+		
 	</dependencies>
 </project>
