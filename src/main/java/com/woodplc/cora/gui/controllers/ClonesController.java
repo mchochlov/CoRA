@@ -2,9 +2,13 @@ package com.woodplc.cora.gui.controllers;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import com.woodplc.cora.app.Main;
+import com.woodplc.cora.data.Feature;
+import com.woodplc.cora.data.ProgramEntryNotFoundException;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
 
@@ -13,6 +17,8 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
@@ -26,12 +32,20 @@ class ClonesController extends Controller {
 	private final ObservableList<SearchEntryView> clones = FXCollections.observableArrayList();
 	private final IREngine engineA;
 	private final IREngine engineOther;
+	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
+	private final String pathA;
+	private final String path;
+	private final Feature feature;
 	
-	ClonesController(String subname, ObservableList<String> systemSubprograms, IREngine engineA, IREngine engineOther) {
+	ClonesController(String subname, ObservableList<String> systemSubprograms, IREngine engineA, IREngine engineOther, 
+			String pathA, String path, Feature feature) {
 		super(subname, systemSubprograms);
 		
 		this.engineA = Objects.requireNonNull(engineA);
 		this.engineOther = Objects.requireNonNull(engineOther);
+		this.pathA = Objects.requireNonNull(pathA);
+		this.path = Objects.requireNonNull(path);
+		this.feature = Objects.requireNonNull(feature);
 	}
 
 	@FXML
@@ -78,6 +92,9 @@ class ClonesController extends Controller {
 		
 		sTask.setOnFailed((e) -> {
 			sTask.getException().printStackTrace();
+			if (sTask.getException() instanceof ProgramEntryNotFoundException) {
+				illegalStateAlert.showAndWait();
+			}
 			searchBtn.setDisable(false);
 		});
 		
@@ -88,12 +105,13 @@ class ClonesController extends Controller {
 	void selectSubprograms(ActionEvent event) {
 		ObservableList<SearchEntryView> selectedClones = clonesTbl.getSelectionModel().getSelectedItems();
 		if (selectedClones.isEmpty()) {return;}
-		
-		systemSubprograms.addAll(selectedClones
+		Set<String> clones = selectedClones
 				.stream()
 				.map(SearchEntryView::getName)
-				.collect(Collectors.toSet()));
-		clones.removeAll(selectedClones);
+				.collect(Collectors.toSet());
+		systemSubprograms.addAll(clones);
+		this.clones.removeAll(selectedClones);
+		feature.addRefactoringCasesFromClones(pathA, path, subname, clones);
 	}
 
 	static class FindClonesTask extends Task<List<SearchEntryView>> {
@@ -111,7 +129,7 @@ class ClonesController extends Controller {
 		}
 		
 		@Override
-		protected List<SearchEntryView> call() throws Exception {
+		protected List<SearchEntryView> call() throws ProgramEntryNotFoundException {
 			List<String> termVector = this.engineA.getDocumentTermVector(subname);
 			final AtomicInteger counter = new AtomicInteger(0);
 			return this.engineOther.moreLikeThis(termVector, query).stream()

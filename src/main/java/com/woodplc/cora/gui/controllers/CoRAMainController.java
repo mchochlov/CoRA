@@ -2,8 +2,10 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +28,7 @@ import com.woodplc.cora.data.ProgramEntryNotFoundException;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.gui.model.CallDependencyView;
+import com.woodplc.cora.gui.model.RefactoringCaseView;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.JSONUtils;
@@ -162,6 +165,18 @@ public class CoRAMainController {
     private Label selectedCLbl;
     @FXML
     private Label locCLbl;
+    
+    // TAB 2
+    @FXML
+	private TableColumn<RefactoringCaseView, String> caseClmnName;
+    @FXML
+   	private TableColumn<RefactoringCaseView, String> flClmnName;
+    @FXML
+   	private TableColumn<RefactoringCaseView, String> drClmnName;
+    @FXML
+   	private TableColumn<RefactoringCaseView, String> plClmnName;
+    @FXML
+	private TableView<RefactoringCaseView> refactoringCaseTbl;
 	
 	private enum ProgressBarColor{
 		BLUE("-fx-accent: blue"),
@@ -261,6 +276,13 @@ public class CoRAMainController {
 		systemAClmnName.setCellValueFactory(new PropertyValueFactory<SearchEntryView, String>("name"));
 		systemASearchResultTbl.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 		systemASearchResultTbl.setItems(filteredSearchResults);
+		
+		caseClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("name"));
+		flClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("flName"));
+		drClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("drName"));
+		plClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("plName"));
+		refactoringCaseTbl.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+		refactoringCaseTbl.setItems(feature.getRefactoringCaseList());
 
 	}
 	
@@ -276,9 +298,12 @@ public class CoRAMainController {
 	        if (module == null || module.getModule() == null) return;
 	        
 	        Set<String> unreferencedSubprograms;
+	        Set<String> externalSubprograms;
 			try {
 				unreferencedSubprograms = module.getModule().getGraph().getUnreferencedSubprograms();
-				setTextFill(unreferencedSubprograms.contains(item) ? Color.RED : Color.BLACK);
+				setTextFill(unreferencedSubprograms.contains(item) ? Color.RED : Color.BLACK);	
+				externalSubprograms = module.getModule().getGraph().getExternalSubprograms();
+				setTextFill(externalSubprograms.contains(item) ? Color.GREEN : Color.BLACK);
 			} catch (ProgramEntryNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -448,6 +473,8 @@ public class CoRAMainController {
 	
 	@FXML
 	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
+		//TODO
+		moduleA.getModule().getGraph().printSubgraph(new HashSet<String>(feature.systemASubprograms()));
 		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms(), null, Modality.APPLICATION_MODAL);
 	}
 
@@ -455,10 +482,12 @@ public class CoRAMainController {
 	void systemAMarkSubprogram(ActionEvent event) {
 		ObservableList<SearchEntryView> selectedItems = systemASearchResultTbl.getSelectionModel().getSelectedItems();
 		if (selectedItems.isEmpty()) {return;}
-		feature.systemASubprograms().addAll(selectedItems
+		List<String> items = selectedItems
 				.stream()
 				.map(SearchEntryView::getName)
-				.collect(Collectors.toList()));
+				.collect(Collectors.toList());
+		feature.systemASubprograms().addAll(items);
+		feature.addRefactoringCasesFromSearch(moduleA.getPath().getFileName().toString(), items);
 	}
 
 	@FXML
@@ -488,23 +517,24 @@ public class CoRAMainController {
 
 	@FXML
     void removeItemsSystemA(ActionEvent event) {
-		removeItems(systemASubprogramList, feature.systemASubprograms());
+		removeItems(systemASubprogramList, feature.systemASubprograms(), moduleA.getPath().getFileName().toString());
     }
 
     @FXML
     void removeItemsSystemB(ActionEvent event) {
-		removeItems(systemBSubprogramList, feature.systemBSubprograms());
+		removeItems(systemBSubprogramList, feature.systemBSubprograms(), moduleB.getPath().getFileName().toString());
     }
 
     @FXML
     void removeItemsSystemC(ActionEvent event) {
-		removeItems(systemCSubprogramList, feature.systemCSubprograms());
+		removeItems(systemCSubprogramList, feature.systemCSubprograms(), moduleC.getPath().getFileName().toString());
     }
     
-    private void removeItems(ListView<String> subprogramList, ObservableList<String> list) {
-    	ObservableList<String> selectedItems = subprogramList.getSelectionModel().getSelectedItems();
+    private void removeItems(ListView<String> subprogramList, ObservableList<String> list, String path) {
+    	List<String> selectedItems = new ArrayList<>(subprogramList.getSelectionModel().getSelectedItems());
 		if (selectedItems.isEmpty()) {return;}
 		list.removeAll(selectedItems);
+		feature.removeRefactoringCases(path, selectedItems);
     }
 	
 	private void loadStage(Resource resource, String title, 
@@ -611,7 +641,10 @@ public class CoRAMainController {
 				selectedSubprogram,
 				fSubprograms,
 				moduleA.getModule().getEngine(),
-				module.getModule().getEngine());
+				module.getModule().getEngine(),
+				moduleA.getPath().getFileName().toString(),
+				module.getPath().getFileName().toString(),
+				feature);
 		case CODEVIEW_FXML:
 		return constructCVController(selectedSubprogram, fSubprograms, module);
 		default:
@@ -646,7 +679,7 @@ public class CoRAMainController {
 				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
-		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
+		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees, module.getPath().getFileName().toString(), feature);
 	}
 	
 	private VariableControlledController constructVCController(String selectedSubprogram,
@@ -665,7 +698,7 @@ public class CoRAMainController {
 			.sorted((x, y) -> Integer.compare(x.getValue().size(), y.getValue().size()))
 			.collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue(), (x, y) -> x, LinkedHashMap::new));
 		
-		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
+		return new VariableControlledController(selectedSubprogram, fSubprograms, variables, module.getPath().getFileName().toString(), feature);
 	}
 	
 	@FXML
@@ -841,7 +874,7 @@ public class CoRAMainController {
 			long loc = 0;
 			
 			for (SubProgram subprogram : subprograms) {
-				try(Stream<String> lines = Files.lines(subprogram.path())){
+				try(Stream<String> lines = Files.lines(subprogram.path(), Charset.defaultCharset())){
 					loc += 
 							lines.limit(subprogram.endLine())
 							.skip(subprogram.startLine())

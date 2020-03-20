@@ -10,6 +10,8 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
@@ -18,246 +20,279 @@
 <?import javafx.scene.layout.VBox?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
-   <top>
-      <VBox prefHeight="81.0" prefWidth="589.0" spacing="5.0" BorderPane.alignment="CENTER">
-         <children>
-            <MenuBar>
-              <menus>
-                <Menu mnemonicParsing="false" text="%menubar.file">
-                  <items>
-                        <Menu mnemonicParsing="false" text="%menubar.file.export">
-                          <items>
-                            <MenuItem mnemonicParsing="false" onAction="#exportToJson" text="%menubar.file.export.json" />
-                          <MenuItem mnemonicParsing="false" onAction="#exportToCsv" text="%menubar.file.export.csv" />
-                          </items>
-                        </Menu>
-                        <MenuItem mnemonicParsing="false" onAction="#quit" text="%menubar.file.quit" />
-                  </items>
-                </Menu>
-                  <Menu mnemonicParsing="false" text="%menubar.analysis">
-                     <items>
-                        <Menu mnemonicParsing="false" text="%menubar.analysis.loc">
+   <center>
+      <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+        <tabs>
+          <Tab text="%tab1">
+            <content>
+                  <BorderPane>
+                     <center>
+                        <SplitPane dividerPositions="0.5" orientation="VERTICAL" prefHeight="276.0" prefWidth="600.0">
                            <items>
-                              <MenuItem mnemonicParsing="false" onAction="#locSystemA" text="%menubar.analysis.loc.systema" />
-                              <MenuItem mnemonicParsing="false" onAction="#locSystemB" text="%menubar.analysis.loc.systemb" />
-                              <MenuItem mnemonicParsing="false" onAction="#locSystemC" text="%menubar.analysis.loc.systemc" />
+                              <VBox prefHeight="145.0" prefWidth="589.0" spacing="5.0">
+                                 <children>
+                                    <HBox spacing="10.0">
+                                       <children>
+                                          <TextField fx:id="searchTxtFld" prefHeight="25.0" prefWidth="267.0" promptText="%search_prompt" />
+                                          <Button fx:id="systemASearchBtn" mnemonicParsing="false" onAction="#systemASearch" text="%search_btn" />
+                                       </children>
+                                    </HBox>
+                                    <TableView fx:id="systemASearchResultTbl" onMouseClicked="#viewSubprogramCodeFromSearch" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
+                                      <columns>
+                                        <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
+                                          <TableColumn fx:id="systemAClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
+                                        <TableColumn fx:id="systemAClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
+                                      </columns>
+                                       <contextMenu>
+                                          <ContextMenu>
+                                            <items>
+                                              <MenuItem mnemonicParsing="false" onAction="#systemAMarkSubprogram" text="%select_btn" />
+                                            </items>
+                                          </ContextMenu>
+                                       </contextMenu>
+                                    </TableView>
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="15.0" right="15.0" top="5.0" />
+                                 </padding>
+                              </VBox>
+                              <HBox spacing="5.0">
+                                 <children>
+                                    <VBox HBox.hgrow="ALWAYS">
+                                       <children>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <Label prefWidth="60.0" text="%system_a_lbl" />
+                                                <Label fx:id="systemABottomLbl" prefWidth="55.0" />
+                                             </children>
+                                          </HBox>
+                                          <ListView fx:id="systemASubprogramList" onMouseClicked="#viewSubprogramCodeSystemA" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                             <contextMenu>
+                                                <ContextMenu>
+                                                  <items>
+                                                    <MenuItem mnemonicParsing="false" onAction="#systemAAdjacentSubprograms" text="%adj_sub_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#systemAVarControlledSubprograms" text="%var_control_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#findClonesSystemB" text="%find_clonesb_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#findClonesSystemC" text="%find_clonesc_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemA" text="%remove_item" />
+                                                  </items>
+                                                </ContextMenu>
+                                             </contextMenu>
+                                          </ListView>
+                                          <HBox layoutX="10.0" layoutY="10.0" spacing="10.0">
+                                             <children>
+                                                <Label fx:id="selectedALbl" prefWidth="105.0" />
+                                                <Label fx:id="locALbl" prefWidth="70.0" />
+                                             </children>
+                                          </HBox>
+                                       </children>
+                                    </VBox>
+                                    <VBox HBox.hgrow="ALWAYS">
+                                       <children>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <Label prefWidth="60.0" text="%system_b_lbl" />
+                                                <Label fx:id="systemBBottomLbl" prefWidth="55.0" />
+                                             </children>
+                                          </HBox>
+                                          <ListView fx:id="systemBSubprogramList" onMouseClicked="#viewSubprogramCodeSystemB" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                             <contextMenu>
+                                                <ContextMenu>
+                                                   <items>
+                                                      <MenuItem mnemonicParsing="false" onAction="#systemBAdjacentSubprograms" text="%adj_sub_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#systemBVarControlledSubprograms" text="%var_control_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemB" text="%remove_item" />
+                                                   </items>
+                                                </ContextMenu>
+                                             </contextMenu>
+                                          </ListView>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <Label fx:id="selectedBLbl" prefWidth="105.0" />
+                                                <Label fx:id="locBLbl" prefWidth="70.0" />
+                                             </children>
+                                          </HBox>
+                                       </children>
+                                    </VBox>
+                                    <VBox HBox.hgrow="ALWAYS">
+                                       <children>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <Label prefWidth="60.0" text="%system_c_lbl" />
+                                                <Label fx:id="systemCBottomLbl" prefWidth="55.0" />
+                                             </children>
+                                          </HBox>
+                                          <ListView fx:id="systemCSubprogramList" onMouseClicked="#viewSubprogramCodeSystemC" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                                             <contextMenu>
+                                                <ContextMenu>
+                                                   <items>
+                                                      <MenuItem mnemonicParsing="false" onAction="#systemCAdjacentSubprograms" text="%adj_sub_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#systemCVarControlledSubprograms" text="%var_control_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemC" text="%remove_item" />
+                                                   </items>
+                                                </ContextMenu>
+                                             </contextMenu>
+                                          </ListView>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <Label fx:id="selectedCLbl" prefWidth="105.0" />
+                                                <Label fx:id="locCLbl" prefWidth="70.0" />
+                                             </children>
+                                          </HBox>
+                                       </children>
+                                    </VBox>
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="15.0" left="15.0" right="15.0" top="5.0" />
+                                 </padding>
+                              </HBox>
                            </items>
-                        </Menu>
+                           <opaqueInsets>
+                              <Insets />
+                           </opaqueInsets>
+                        </SplitPane>
+                     </center>
+                     <top>
+                        <VBox spacing="5.0" BorderPane.alignment="CENTER">
+                           <padding>
+                              <Insets bottom="15.0" top="15.0" />
+                           </padding>
+                           <children>
+                              <HBox spacing="10.0">
+                                 <children>
+                                    <Label prefWidth="60.0" text="%system_a_lbl">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="55.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField fx:id="systemADirFld" />
+                                    <Button fx:id="systemABrowseBtn" mnemonicParsing="false" onAction="#openSystemABrowseDlg" text="%browse_btn" />
+                                    <Button fx:id="systemAParseBtn" mnemonicParsing="false" onAction="#parseSystemA" text="%parse_btn" />
+                                    <ProgressBar fx:id="systemAProgressBar" prefHeight="18.0" prefWidth="150.0" progress="0.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                 </children>
+                                 <padding>
+                                    <Insets left="15.0" right="15.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox spacing="10.0">
+                                 <children>
+                                    <Label prefWidth="60.0" text="%system_b_lbl">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="55.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField fx:id="systemBDirFld" />
+                                    <Button fx:id="systemBBrowseBtn" mnemonicParsing="false" onAction="#openSystemBBrowseDlg" text="%browse_btn" />
+                                    <Button fx:id="systemBParseBtn" mnemonicParsing="false" onAction="#parseSystemB" text="%parse_btn" />
+                                    <ProgressBar fx:id="systemBProgressBar" prefWidth="150.0" progress="0.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                 </children>
+                                 <padding>
+                                    <Insets left="15.0" right="15.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox spacing="10.0">
+                                 <children>
+                                    <Label prefWidth="60.0" text="%system_c_lbl">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <Label fx:id="systemCLbl" prefWidth="55.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField fx:id="systemCDirFld" />
+                                    <Button fx:id="systemCBrowseBtn" mnemonicParsing="false" onAction="#openSystemCBrowseDlg" text="%browse_btn" />
+                                    <Button fx:id="systemCParseBtn" mnemonicParsing="false" onAction="#parseSystemC" text="%parse_btn" />
+                                    <ProgressBar fx:id="systemCProgressBar" prefWidth="150.0" progress="0.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                 </children>
+                                 <padding>
+                                    <Insets left="15.0" right="15.0" />
+                                 </padding>
+                              </HBox>
+                           </children>
+                        </VBox>
+                     </top>
+                  </BorderPane>
+            </content>
+          </Tab>
+          <Tab text="%tab2">
+            <content>
+                  <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0">
+                     <children>
+                        <Label text="%ref_cases" />
+                        <TableView fx:id="refactoringCaseTbl" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
+                          <columns>
+                            <TableColumn fx:id="caseClmnName" prefWidth="75.0" text="%case.name" />
+                            <TableColumn fx:id="flClmnName" prefWidth="153.33331298828125" text="%case.fl" />
+                              <TableColumn fx:id="drClmnName" minWidth="0.0" prefWidth="114.6666259765625" text="%case.dr" />
+                              <TableColumn fx:id="plClmnName" prefWidth="378.3333740234375" text="%case.pl" />
+                          </columns>
+                        </TableView>
+                     </children>
+                     <padding>
+                        <Insets bottom="5.0" left="15.0" right="15.0" top="5.0" />
+                     </padding>
+                  </VBox>
+            </content>
+          </Tab>
+        </tabs>
+      </TabPane>
+   </center>
+   <top>
+      <MenuBar>
+         <menus>
+            <Menu mnemonicParsing="false" text="%menubar.file">
+               <items>
+                  <Menu mnemonicParsing="false" text="%menubar.file.export">
+                     <items>
+                        <MenuItem mnemonicParsing="false" onAction="#exportToJson" text="%menubar.file.export.json" />
+                        <MenuItem mnemonicParsing="false" onAction="#exportToCsv" text="%menubar.file.export.csv" />
                      </items>
                   </Menu>
-                <Menu mnemonicParsing="false" text="%menubar.help">
-                  <items>
-                    <MenuItem mnemonicParsing="false" onAction="#about" text="%menubar.help.about" />
-                  </items>
-                </Menu>
-              </menus>
-            </MenuBar>
-            <HBox spacing="10.0">
-               <children>
-                  <Label prefWidth="60.0" text="%system_a_lbl">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="55.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <TextField fx:id="systemADirFld" />
-                  <Button fx:id="systemABrowseBtn" mnemonicParsing="false" onAction="#openSystemABrowseDlg" text="%browse_btn" />
-                  <Button fx:id="systemAParseBtn" mnemonicParsing="false" onAction="#parseSystemA" text="%parse_btn" />
-                  <ProgressBar fx:id="systemAProgressBar" prefHeight="18.0" prefWidth="150.0" progress="0.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </ProgressBar>
-               </children>
-               <padding>
-                  <Insets left="15.0" right="15.0" />
-               </padding>
-            </HBox>
-            <HBox spacing="10.0">
-               <children>
-                  <Label prefWidth="60.0" text="%system_b_lbl">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="55.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <TextField fx:id="systemBDirFld" />
-                  <Button fx:id="systemBBrowseBtn" mnemonicParsing="false" onAction="#openSystemBBrowseDlg" text="%browse_btn" />
-                  <Button fx:id="systemBParseBtn" mnemonicParsing="false" onAction="#parseSystemB" text="%parse_btn" />
-                  <ProgressBar fx:id="systemBProgressBar" prefWidth="150.0" progress="0.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </ProgressBar>
-               </children>
-               <padding>
-                  <Insets left="15.0" right="15.0" />
-               </padding>
-            </HBox>
-            <HBox spacing="10.0">
-               <children>
-                  <Label prefWidth="60.0" text="%system_c_lbl">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <Label fx:id="systemCLbl" prefWidth="55.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </Label>
-                  <TextField fx:id="systemCDirFld" />
-                  <Button fx:id="systemCBrowseBtn" mnemonicParsing="false" onAction="#openSystemCBrowseDlg" text="%browse_btn" />
-                  <Button fx:id="systemCParseBtn" mnemonicParsing="false" onAction="#parseSystemC" text="%parse_btn" />
-                  <ProgressBar fx:id="systemCProgressBar" prefWidth="150.0" progress="0.0">
-                     <HBox.margin>
-                        <Insets top="5.0" />
-                     </HBox.margin>
-                  </ProgressBar>
-               </children>
-               <padding>
-                  <Insets left="15.0" right="15.0" />
-               </padding>
-            </HBox>
-         </children>
-         <padding>
-            <Insets bottom="15.0" />
-         </padding>
-      </VBox>
+                  <MenuItem mnemonicParsing="false" onAction="#quit" text="%menubar.file.quit" />
+               </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="%menubar.analysis">
+               <items>
+                  <Menu mnemonicParsing="false" text="%menubar.analysis.loc">
+                     <items>
+                        <MenuItem mnemonicParsing="false" onAction="#locSystemA" text="%menubar.analysis.loc.systema" />
+                        <MenuItem mnemonicParsing="false" onAction="#locSystemB" text="%menubar.analysis.loc.systemb" />
+                        <MenuItem mnemonicParsing="false" onAction="#locSystemC" text="%menubar.analysis.loc.systemc" />
+                     </items>
+                  </Menu>
+               </items>
+            </Menu>
+            <Menu mnemonicParsing="false" text="%menubar.help">
+               <items>
+                  <MenuItem mnemonicParsing="false" onAction="#about" text="%menubar.help.about" />
+               </items>
+            </Menu>
+         </menus>
+      </MenuBar>
    </top>
-   <center>
-      <SplitPane dividerPositions="0.5" orientation="VERTICAL" BorderPane.alignment="CENTER">
-         <items>
-            <VBox prefHeight="145.0" prefWidth="589.0" spacing="5.0">
-               <children>
-                  <HBox spacing="10.0">
-                     <children>
-                        <TextField fx:id="searchTxtFld" prefHeight="25.0" prefWidth="267.0" promptText="%search_prompt" />
-                        <Button fx:id="systemASearchBtn" mnemonicParsing="false" onAction="#systemASearch" text="%search_btn" />
-                     </children>
-                  </HBox>
-                  <TableView fx:id="systemASearchResultTbl" onMouseClicked="#viewSubprogramCodeFromSearch" prefHeight="120.0" prefWidth="603.0" VBox.vgrow="ALWAYS">
-                    <columns>
-                      <TableColumn fx:id="systemAClmnId" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" styleClass="left_aligned_colname" text="%search_col_position" />
-                        <TableColumn fx:id="systemAClmnScore" maxWidth="50.0" minWidth="50.0" prefWidth="50.0" styleClass="left_aligned_colname" text="%search_col_score" />
-                      <TableColumn fx:id="systemAClmnName" prefWidth="518.0" styleClass="left_aligned_colname" text="%search_col_subprogram" />
-                    </columns>
-                     <contextMenu>
-                        <ContextMenu>
-                          <items>
-                            <MenuItem mnemonicParsing="false" onAction="#systemAMarkSubprogram" text="%select_btn" />
-                          </items>
-                        </ContextMenu>
-                     </contextMenu>
-                  </TableView>
-               </children>
-               <padding>
-                  <Insets bottom="5.0" left="15.0" right="15.0" top="5.0" />
-               </padding>
-            </VBox>
-            <HBox spacing="5.0">
-               <children>
-                  <VBox HBox.hgrow="ALWAYS">
-                     <children>
-                        <HBox spacing="10.0">
-                           <children>
-                              <Label prefWidth="60.0" text="%system_a_lbl" />
-                              <Label fx:id="systemABottomLbl" prefWidth="55.0" />
-                           </children>
-                        </HBox>
-                        <ListView fx:id="systemASubprogramList" onMouseClicked="#viewSubprogramCodeSystemA" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                           <contextMenu>
-                              <ContextMenu>
-                                <items>
-                                  <MenuItem mnemonicParsing="false" onAction="#systemAAdjacentSubprograms" text="%adj_sub_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#systemAVarControlledSubprograms" text="%var_control_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#findClonesSystemB" text="%find_clonesb_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#findClonesSystemC" text="%find_clonesc_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemA" text="%remove_item" />
-                                </items>
-                              </ContextMenu>
-                           </contextMenu>
-                        </ListView>
-                        <HBox layoutX="10.0" layoutY="10.0" spacing="10.0">
-                           <children>
-                              <Label fx:id="selectedALbl" prefWidth="105.0" />
-                              <Label fx:id="locALbl" prefWidth="70.0" />
-                           </children>
-                        </HBox>
-                     </children>
-                  </VBox>
-                  <VBox HBox.hgrow="ALWAYS">
-                     <children>
-                        <HBox spacing="10.0">
-                           <children>
-                              <Label prefWidth="60.0" text="%system_b_lbl" />
-                              <Label fx:id="systemBBottomLbl" prefWidth="55.0" />
-                           </children>
-                        </HBox>
-                        <ListView fx:id="systemBSubprogramList" onMouseClicked="#viewSubprogramCodeSystemB" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                           <contextMenu>
-                              <ContextMenu>
-                                 <items>
-                                    <MenuItem mnemonicParsing="false" onAction="#systemBAdjacentSubprograms" text="%adj_sub_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#systemBVarControlledSubprograms" text="%var_control_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemB" text="%remove_item" />
-                                 </items>
-                              </ContextMenu>
-                           </contextMenu></ListView>
-                        <HBox spacing="10.0">
-                           <children>
-                              <Label fx:id="selectedBLbl" prefWidth="105.0" />
-                              <Label fx:id="locBLbl" prefWidth="70.0" />
-                           </children>
-                        </HBox>
-                     </children>
-                  </VBox>
-                  <VBox HBox.hgrow="ALWAYS">
-                     <children>
-                        <HBox spacing="10.0">
-                           <children>
-                              <Label prefWidth="60.0" text="%system_c_lbl" />
-                              <Label fx:id="systemCBottomLbl" prefWidth="55.0" />
-                           </children>
-                        </HBox>
-                        <ListView fx:id="systemCSubprogramList" onMouseClicked="#viewSubprogramCodeSystemC" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
-                           <contextMenu>
-                              <ContextMenu>
-                                 <items>
-                                    <MenuItem mnemonicParsing="false" onAction="#systemCAdjacentSubprograms" text="%adj_sub_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#systemCVarControlledSubprograms" text="%var_control_item" />
-                                    <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemC" text="%remove_item" />
-                                 </items>
-                              </ContextMenu>
-                           </contextMenu></ListView>
-                        <HBox spacing="10.0">
-                           <children>
-                              <Label fx:id="selectedCLbl" prefWidth="105.0" />
-                              <Label fx:id="locCLbl" prefWidth="70.0" />
-                           </children>
-                        </HBox>
-                     </children>
-                  </VBox>
-               </children>
-               <padding>
-                  <Insets bottom="15.0" left="15.0" right="15.0" top="5.0" />
-               </padding>
-            </HBox>
-         </items>
-         <BorderPane.margin>
-            <Insets />
-         </BorderPane.margin>
-         <opaqueInsets>
-            <Insets />
-         </opaqueInsets>
-      </SplitPane>
-   </center>
 </BorderPane>

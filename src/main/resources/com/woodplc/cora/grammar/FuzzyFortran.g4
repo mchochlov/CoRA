@@ -1,7 +1,7 @@
 grammar FuzzyFortran;
 
 inputFile : ( subprogram | module | . )*
-	//{System.out.println("subprogram: " + $subprogram.start);}
+	{System.out.println("subprogram: " + $subprogram.start);}
 ;
 
 module : 'module' ID ( subprogram | . ) * 'end' ('module' (ID)?)?  (NL|EOF);
