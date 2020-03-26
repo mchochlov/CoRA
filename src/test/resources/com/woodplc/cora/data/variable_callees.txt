@@ -1,0 +1,19 @@
+MS,
+IX,
+JX,
+answer,
+ch,
+IJNT,
+id_no,
+ierr,
+option_option,freeh
+expected_option_word,freeh find_reals_in_line
+option_wavezone,find_reals_in_line
+option_float_convolution,freeh
+option_float_rao_forces,freeh
+option_float_qtf_forces,freeh
+found_frequencies_tag,find_reals_in_line
+hash_include,
+skipline,
+nsea,
+idscrt,
