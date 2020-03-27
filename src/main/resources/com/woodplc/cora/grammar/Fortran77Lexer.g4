@@ -28,7 +28,7 @@
  */
 lexer grammar Fortran77Lexer;
 @lexer::members {
-    boolean fixedForm = false;
+    public boolean fixedForm = true;
 	int chars = 0;
 }
 

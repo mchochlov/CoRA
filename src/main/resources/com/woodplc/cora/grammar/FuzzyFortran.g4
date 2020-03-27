@@ -1,65 +1,222 @@
 grammar FuzzyFortran;
 
-inputFile : ( subprogram | module | . )*
-	//{System.out.println("subprogram: " + $subprogram.start);}
-;
+import FuzzyFortranFast;
 
-module : 'module' ID ( subprogram | . ) * 'end' ('module' (ID)?)?  (NL|EOF);
+module : moduleStatement (typeStatement | publicStatement | privateStatement | subprogram | . )*? moduleEndStatement;
 
-subprogram : ( COMMENT | OLD_COMMENT | EMPTY_LINE )* prefix* subType ID body 'end' (subType (ID)?)? (NL|EOF)
+typeStatement
+   : typename (',' (dimensionStatement|intentStatement| PARAMETER| ALLOCATABLE| accessSpecifier | OPTIONAL | SAVE | EXTERNAL | TARGET | POINTER | PROTECTED))* '::'? typeStatementNameList
+   ;
+
+publicStatement : PUBLIC ('::'? identifier (',' identifier)*)?;
+
+privateStatement : PRIVATE ('::'? identifier (',' identifier)*)?;
+
+allocateStatement : ALLOCATE LPAREN (typename '::')? exprList1 (',' allocOpt)* RPAREN;
+
+allocOpt : optKeywords '=' identifier;
+
+optKeywords : STAT | ERRMSG | SOURCE | MOLD;
+
+typeStatementNameList
+   : typeStatementName (',' typeStatementName)*
+   | assignmentStatement (',' assignmentStatement)*
+   ;
+   
+typeStatementName
+   : identifier
+   | arrayDeclarator
+   ;
+   
+assignmentStatement
+   : expression1 '=' expression1
+   ;
+   
+accessSpecifier : PUBLIC | PRIVATE;
+
+intentStatement
+	: INTENT LPAREN INTENTION RPAREN
+	| INTENT LPAREN INTENTION RPAREN '::'? arrayDeclaratorExtents
+	;
+	
+dimensionStatement
+   : DIMENSION arrayDeclarators
+   | DIMENSION LPAREN arrayDeclaratorExtents RPAREN
+   ;
+
+arrayDeclarator
+   : identifier LPAREN arrayDeclaratorExtents RPAREN
+   ;
+
+arrayDeclarators
+   : arrayDeclarator (',' arrayDeclarator)*
+   ;
+
+arrayDeclaratorExtents
+   : arrayDeclaratorExtent (',' arrayDeclaratorExtent)*
+   ;
+
+arrayDeclaratorExtent
+   : expression1
+   ;
+   
+typename
+   : REAL (LPAREN expression1 RPAREN)? 
+   | COMPLEX (LPAREN expression1 RPAREN) 
+   | DOUBLE COMPLEX 
+   | DOUBLE PRECISION 
+   | INTEGER (LPAREN expression1 RPAREN)?
+   | LOGICAL (LPAREN expression1 RPAREN)?
+   | CHARACTER (LPAREN ((KIND|LEN) '=')? (expression1|'*') RPAREN)?
+   | CHARACTER '*' expression1
+   | TYPE LPAREN identifier RPAREN
+   | CLASS LPAREN identifier RPAREN
+   ;
+
+expression1 
+	: identifier LPAREN exprList1 RPAREN expression1
+	| identifier LPAREN exprList1? RPAREN
+	| expression1 (EQ | NE | GT | GE | LT | LE | LOR | LAND ) expression1
+	| (LNOT) expression1
+	| expression1 POWER expression1
+	| expression1 ('*' | DIV) expression1
+	| expression1 ('+' | '-') expression1
+	| expression1 DIV DIV expression1
+	| ('+'|'-') expression1
+	| identifier
+	| NUMBER
+	| logicalConstant
+	| LPAREN expression1 RPAREN
+	| expression1 ':' expression1
+	| ':'
+	| expression1 ':'
+	| ':' expression1
+	| expression1 '%' expression1
+	| '%' expression1
+	;
+
+logicalConstant : (TRUE | FALSE)
+   ;
+
+exprList1 : expression1 ((','|':') expression1)*;
+
+moduleStatement : MODULE identifier;
+
+moduleEndStatement : END MODULE identifier?;
+
+subprogram : ( COMMENT | OLD_COMMENT | EMPTY_LINE )* prefix* subType identifier body END (subType (identifier)?)? (NL|EOF)
 	//{System.out.println("subprogram: " + $start+ $stop);}
 ;
 
-
-body : ( ifStatement | ifOneLine | callStatement | . )*?
+body : ( ifStatement | ifOneLine | callStatement | allocateStatement | . )*?
 	//{System.out.println("body: " + $ctx.start);}
 ;
 
-//useStatement : 'use' ID (',' 'only' ':' ID (',' ID | NL | '&')* ) ?;
 
 callStatement :
-	'call' (callPrefix)? ID ('(')?
+	CALL (callPrefix)? identifier (LPAREN)?
 ;
 
-callPrefix : ID '%';
+callPrefix : identifier '%';
 
-ifOneLine : 'if' '(' block ')' (callStatement | ~'then' )
-	//{System.out.println("ifonelineblock: " + $start + $stop);}
-;
+identifier
+   : ID
+   | INTENTION
+   | NUMBER
+   | ERRMSG
+   | ALLOCATE
+   ;
 
-block : ( ID | '()' | '(' block ')' | ~( '(' | ')' ) )+?
-	//{System.out.println("block: " + $ID.text);}
-;
+ALLOCATABLE : A L L O C A T A B L E;
 
-ifStatement : 'if' '(' block ')' ('&' | NL | '1')* 'then'
-	body
-	(('else' 'if' | 'elseif') '(' block ')' ('&' | NL | '1')* 'then' body)*
-	('else' body)? 
-	('end' 'if' | 'endif' )
-	//{System.out.println("if block: " + $start + $stop);}
-;
+ALLOCATE : A L L O C A T E;
 
+PARAMETER : P A R A M E T E R;
 
-//endIfStatement : ('end' 'if' | 'endif') (ID)?;
+PUBLIC : P U B L I C;
 
-prefix : 'pure' | 'elemental' | dataType;
+PRIVATE : P R I V A T E;
 
-subType : 'function' | 'subroutine' | 'program';
+OPTIONAL : O P T I O N A L;
 
-dataType: 'real' ('(' NUMBER ')')? | 'integer' ('(' NUMBER ')')? | 'logical' ('(' NUMBER ')')?;
+EXTERNAL : E X T E R N A L;
 
-// hack for pipelay
-ONEH : '1h\'';
-CONTAINS : 'contains' NL;
-EMPTY_LINE :{getCharPositionInLine() == 0}?[ \t]* NL;
-LITERAL : ('"' .*? '"' | '\'' .*? '\'');// {System.out.println("LITERAL" + getText());};
-MACRO : '#'{getCharPositionInLine() == 1}? .*? NL -> skip;
-COMMENT : ('!') .*? NL;
-OLD_COMMENT : 'c'{getCharPositionInLine() == 1}? .*? NL;
-INTERFACE : 'interface' .*? 'end interface' -> skip;
-//ELSEIF : 'else if' -> skip;
-NUMBER: [0-9]+;
-ID : [a-zA-Z][a-zA-Z0-9_]*;
-WS : [ \t]+ -> skip ;
-NL : '\r'? '\n';
-ANY : . ;
+INTRINSIC : I N T R I N S I C;
+
+SAVE : S A V E ;
+
+TARGET : T A R G E T;
+
+POINTER : P O I N T E R ;
+
+PROTECTED : P R O T E C T E D ;
+
+INTENT : I N T E N T;
+
+CLASS : C L A S S;
+
+DOUBLE : D O U B L E;
+
+COMPLEX : C O M P L E X;
+
+PRECISION : P R E C I S I O N;
+
+CHARACTER : C H A R A C T E R;
+
+KIND : K I N D;
+
+LEN : L E N;
+
+fragment IN : I N;
+
+fragment OUT : O U T;
+
+fragment INOUT : I N [ \t]* O U T;
+
+INTENTION : IN | OUT | INOUT;
+
+POWER : '**' ;
+
+LNOT : '.not.' | '.NOT.' ;
+
+LAND : '.and.' | '.AND.' ;
+
+LOR : '.or.' | '.OR.' ;
+
+EQV : '.eqv.' | '.EQV.' ;
+
+NEQV : '.neqv.' | '.NEQV.' ;
+
+XOR : '.xor.' | '.XOR.' ;
+
+EOR : '.eor.' | '.EOR.' ;
+
+LT : '.lt.' | '.LT.' | '<' ;
+
+LE : '.le.' | '.LE.' | '<=' ;
+
+GT : '.gt.' | '.GT.' | '>' ;
+
+GE : '.ge.' | '.GE.' | '>=' ;
+
+NE : '.ne.' | '.NE.' | '/=' ;
+
+EQ : '.eq.' | '.EQ.' | '==' ;
+
+TRUE : '.true.' | '.TRUE.' ;
+
+FALSE : '.false.' | '.FALSE.' ;
+
+DIMENSION : D I M E N S I O N ;
+
+ERRMSG : E R R M S G;
+
+SOURCE : S O U R C E;
+
+MOLD : M O L D;
+
+STAT : S T A T;
+
+TYPE_SKIP : T Y P E .*? END [ \t]+ T Y P E -> skip;
+
+TYPE : T Y P E;

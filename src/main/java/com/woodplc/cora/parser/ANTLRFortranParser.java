@@ -27,19 +27,22 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
-import com.woodplc.cora.grammar.FuzzyFortranBaseListener;
+import com.woodplc.cora.grammar.FuzzyFortranFastBaseListener;
+import com.woodplc.cora.grammar.FuzzyFortranFastLexer;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser.CallStatementContext;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser.IfOneLineContext;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser.IfStatementContext;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser.ModuleContext;
+import com.woodplc.cora.grammar.FuzzyFortranFastParser.SubprogramContext;
 import com.woodplc.cora.grammar.FuzzyFortranLexer;
 import com.woodplc.cora.grammar.FuzzyFortranParser;
-import com.woodplc.cora.grammar.FuzzyFortranParser.CallStatementContext;
-import com.woodplc.cora.grammar.FuzzyFortranParser.IfOneLineContext;
-import com.woodplc.cora.grammar.FuzzyFortranParser.IfStatementContext;
-import com.woodplc.cora.grammar.FuzzyFortranParser.ModuleContext;
-import com.woodplc.cora.grammar.FuzzyFortranParser.SubprogramContext;
 import com.woodplc.cora.ir.IREngine;
 
 class ANTLRFortranParser implements Parser {
 
 	private final IREngine engine;
+	private static final String MODULE_MARKER = "end module";
 	
 	public ANTLRFortranParser(IREngine engine) {
 		this.engine = engine;
@@ -50,36 +53,62 @@ class ANTLRFortranParser implements Parser {
 		Objects.requireNonNull(path);
 		
 		CharStream stream = null;
+		String data = null; 
 		try {
-			stream = CharStreams.fromString(new String(Files.readAllBytes(path)).toLowerCase());
+			data = new String(Files.readAllBytes(path));
+			stream = CharStreams.fromString(data);
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 		
-		FuzzyFortranLexer lexer = new FuzzyFortranLexer(stream);
-		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-		FuzzyFortranParser parser = new FuzzyFortranParser(commonTokenStream);
-		parser.setErrorHandler(new BailErrorStrategy());
-		parser.removeErrorListeners();
-		parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
-		FuzzyListener fl = new FuzzyListener(path, engine, stream);
-		ParseTree tree = null;
-		try {
-			tree = parser.inputFile();
-		} catch (ParseCancellationException e) {
-			e.printStackTrace();
-			commonTokenStream.seek(0);
-			parser.addErrorListener(ConsoleErrorListener.INSTANCE);
-			parser.setErrorHandler(new DefaultErrorStrategy());
-			parser.getInterpreter().setPredictionMode(PredictionMode.LL);
-			tree = parser.inputFile();
-		}
-		ParseTreeWalker ptw = new ParseTreeWalker();
-		ptw.walk(fl, tree);
-		return fl.getSDGraph();
+		if (data.contains(MODULE_MARKER) || data.contains("END MODULE")) {
+			FuzzyFortranLexer lexer = new FuzzyFortranLexer(stream);
+			CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+			FuzzyFortranParser parser = new FuzzyFortranParser(commonTokenStream);	
+			parser.setErrorHandler(new BailErrorStrategy());
+			parser.removeErrorListeners();
+			parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
+			FuzzyListener fl = new FuzzyListener(path, engine, stream);
+			ParseTree tree = null;
+			try {
+				tree = parser.inputFile();
+			} catch (ParseCancellationException e) {
+				e.printStackTrace();
+				commonTokenStream.seek(0);
+				parser.addErrorListener(ConsoleErrorListener.INSTANCE);
+				parser.setErrorHandler(new DefaultErrorStrategy());
+				parser.getInterpreter().setPredictionMode(PredictionMode.LL);
+				tree = parser.inputFile();
+			}
+			ParseTreeWalker ptw = new ParseTreeWalker();
+			ptw.walk(fl, tree);
+			return fl.getSDGraph();
+		} else {
+			FuzzyFortranFastLexer lexer = new FuzzyFortranFastLexer(stream);
+			CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+			FuzzyFortranFastParser parser = new FuzzyFortranFastParser(commonTokenStream);
+			parser.setErrorHandler(new BailErrorStrategy());
+			parser.removeErrorListeners();
+			parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
+			FuzzyListenerFast fl = new FuzzyListenerFast(path, engine, stream);
+			ParseTree tree = null;
+			try {
+				tree = parser.inputFile();
+			} catch (ParseCancellationException e) {
+				e.printStackTrace();
+				commonTokenStream.seek(0);
+				parser.addErrorListener(ConsoleErrorListener.INSTANCE);
+				parser.setErrorHandler(new DefaultErrorStrategy());
+				parser.getInterpreter().setPredictionMode(PredictionMode.LL);
+				tree = parser.inputFile();
+			}
+			ParseTreeWalker ptw = new ParseTreeWalker();
+			ptw.walk(fl, tree);
+			return fl.getSDGraph();
+		}	
 	}
 	
-	private static class FuzzyListener extends FuzzyFortranBaseListener {
+	private static class FuzzyListenerFast extends FuzzyFortranFastBaseListener {
 
 		private static final Set<String> RELATIONAL_LOGICAL_EXPRESSSIONS = new HashSet<>(Arrays.asList(
 				"lt", "le", "eq", "ne", "gt", "ge", "and", "or", "neqv", "xor", "eqv", "not"
@@ -88,16 +117,16 @@ class ANTLRFortranParser implements Parser {
 		private final CharStream charStream;
 		private final Path fname;
 		private final IREngine engine;
-		private final SDGraph graph = Graphs.newInstance();
+		protected final SDGraph graph = Graphs.newInstance();
 		private final Set<String> localCallees = new HashSet<>();
 
-		private FuzzyListener(Path fname, IREngine engine, CharStream charStream){
+		private FuzzyListenerFast(Path fname, IREngine engine, CharStream charStream){
 			this.fname = fname;
 			this.engine = engine;
 			this.charStream = charStream;
 		}
 		
-		private SDGraph getSDGraph() {return graph;}
+		protected SDGraph getSDGraph() {return graph;}
 		
 		@Override
 		public void exitSubprogram(SubprogramContext ctx) {
@@ -154,5 +183,6 @@ class ANTLRFortranParser implements Parser {
 		}
 	
 	}
+
 
 }
