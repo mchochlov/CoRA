@@ -89,7 +89,7 @@ entryStatement
    ;
 
 functionStatement
-   : (subPrefix | type)* FUNCTION NAME (LPAREN (namelist)? RPAREN)? funcSuffix? EOL
+   : (subPrefix | type)* FUNCTION subName (LPAREN (namelist)? RPAREN)? funcSuffix? EOL
    ;
 
 funcSuffix : RESULT LPAREN identifier RPAREN;
@@ -273,7 +273,7 @@ dimensionStatement
    ;
 
 arrayDeclarator
-   : (NAME | REAL | identifier) LPAREN arrayDeclaratorExtents RPAREN
+   : identifier LPAREN arrayDeclaratorExtents RPAREN
    ;
 
 arrayDeclarators
@@ -336,7 +336,7 @@ onlyListItem : identifier | bindingStatement;
 
 typeStatement
    : typename (COMMA (dimensionStatement|intentStatement| PARAMETER| ALLOCATABLE| accessSpecifier | OPTIONAL | SAVE | EXTERNAL | TARGET | POINTER | PROTECTED))* DOUBLE_COLON? typeStatementNameList
-   | characterWithLen typeStatementNameCharList
+//| characterWithLen typeStatementNameCharList
    ;
 
 typeStatementNameList

@@ -6,20 +6,25 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.antlr.v4.runtime.tree.Trees;
 
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ModuleVariable;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 import com.woodplc.cora.grammar.FuzzyFortranBaseListener;
+import com.woodplc.cora.grammar.FuzzyFortranLexer;
 import com.woodplc.cora.grammar.FuzzyFortranParser.AllocateStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.AssignmentStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.CallStatementContext;
+import com.woodplc.cora.grammar.FuzzyFortranParser.Expression1Context;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IdentifierContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfOneLineContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfStatementContext;
@@ -84,6 +89,7 @@ class FuzzyListener extends FuzzyFortranBaseListener {
 		currentPublicSubprograms.clear();
 		collectionTypes.clear();
 		privateSpecifier = false;
+		graph.addModule(currentModule);
 		//System.out.println(ctx.identifier().getText());
 	}
 
@@ -105,6 +111,11 @@ class FuzzyListener extends FuzzyFortranBaseListener {
 			ModuleVariable mv = graph.getModuleVariable(currentModule, allocatedVariable);
 			if (mv == null) throw new IllegalStateException();
 			mv.setAllocation(ctx.exprList1().expression1(0).exprList1().getText());
+			List<String> allocationParameters = Trees.findAllTokenNodes(ctx.exprList1().expression1(0).exprList1(), FuzzyFortranLexer.ID)
+					.stream()
+					.map(x -> x.getText())
+					.collect(Collectors.toList());
+			mv.setAllocationParameters(allocationParameters);
 		}
 	}
 	
@@ -128,7 +139,9 @@ class FuzzyListener extends FuzzyFortranBaseListener {
 			ModuleVariable mv = new ModuleVariable("external");
 			graph.addModuleVariable(currentModule, subprogram.name(), mv);
 		}
-		engine.index(subprogram.name(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
+		if (engine != null) {
+			engine.index(subprogram.name(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));			
+		}
 		localCallees.clear();
 	}
 
