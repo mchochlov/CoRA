@@ -48,6 +48,10 @@ class ANTLRFortranParser implements Parser {
 		this.engine = engine;
 	}
 
+	public ANTLRFortranParser() {
+		this.engine = null;
+	}
+
 	@Override
 	public SDGraph parse(Path path) {
 		Objects.requireNonNull(path);
@@ -142,7 +146,9 @@ class ANTLRFortranParser implements Parser {
 					fname);
 			
 			graph.addSubprogramAndCallees(subprogram, new HashSet<>(localCallees));
-			engine.index(subprogram.name(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
+			if(engine !=  null) {
+				engine.index(subprogram.name(), charStream.getText(Interval.of(ctx.start.getStartIndex(), ctx.stop.getStopIndex())));
+			}
 			localCallees.clear();
 		}
 

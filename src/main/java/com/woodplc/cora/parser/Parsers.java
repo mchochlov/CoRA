@@ -24,5 +24,9 @@ public final class Parsers {
 	public static boolean isFortranFile(Path path) {
 		return FORTRAN_FILE_EXTENSIONS.contains(MoreFiles.getFileExtension(path).toLowerCase());
 	}
+
+	public static Parser nonIndexableFortranParser() {
+		return new ANTLRFortranParser();
+	}
 	
 }
