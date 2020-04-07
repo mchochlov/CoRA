@@ -29,18 +29,18 @@ subroutine check_pip_contact(int_node,contact, npipnod, nkpipnod, mxpipnod, &
   ! Declare variables that are passed as arguments
   integer, intent(out)  :: contact
   integer, intent(in)   :: int_node
-  integer :: mxpipnod
-  integer :: n0kpipnod
-  integer :: nkpipnod
-  integer :: nonp
-  integer :: npipnod
-  integer :: numel
-  integer :: size_epi
-  integer, dimension(size_epi,nonp) :: epi
-  logical, dimension(mxpipnod-n0kpipnod) :: pip_contact
-  logical, dimension(mxpipnod) :: pip_ignore
-  integer, dimension(numel) :: pip_inner_elem
-  integer, dimension(mxpipnod,2) :: pip_nodes
+  integer, intent(in) :: mxpipnod
+  integer, intent(in) :: n0kpipnod
+  integer, intent(in) :: nkpipnod
+  integer, intent(in) :: nonp
+  integer, intent(in) :: npipnod
+  integer, intent(in) :: numel
+  integer, intent(in) :: size_epi
+  integer, intent(in), dimension(size_epi,nonp) :: epi
+  logical, intent(in), dimension(mxpipnod-n0kpipnod) :: pip_contact
+  logical, intent(in), dimension(mxpipnod) :: pip_ignore
+  integer, intent(in), dimension(numel) :: pip_inner_elem
+  integer, intent(in), dimension(mxpipnod,2) :: pip_nodes
   
   !Local variables
   integer :: ipair

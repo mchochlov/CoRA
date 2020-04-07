@@ -7,12 +7,12 @@ C
 C
 C Dummy arguments
 C
-      REAL(8) :: ANGCOS
-      REAL(8) :: ANGSIN
-      real(8) :: PI
+      REAL(8), intent(inout) :: ANGCOS
+      REAL(8), intent(out) :: ANGLE
+      REAL(8), intent(inout) :: ANGSIN
+      real(8), intent(in) :: PI
       
-      !Local variables
-      REAL(8) :: ANGLE
+C Local variables
       REAL(8) :: DASIN
       
 C

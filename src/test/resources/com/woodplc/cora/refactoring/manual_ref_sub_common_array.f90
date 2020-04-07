@@ -2,8 +2,7 @@
 !
 !
 !
-      SUBROUTINE TRANSF(DISPT,DISP,TDICOS, nnode, ndeg, n1, DUMP, FC, FW, &
-	& ICROUT, INT, ITYPE, LM)
+      SUBROUTINE TRANSF(DISPT,DISP,TDICOS, nnode, ndeg, n1, DUMP)
 
       
 
@@ -14,19 +13,12 @@
       !
       ! COMMON VARIABLES
       !
-      INTEGER :: ICROUT
-      INTEGER :: INT
-      INTEGER :: ITYPE
-      integer :: n1
-      integer :: ndeg
-      integer :: nnode
-      REAL(8), DIMENSION(N1) :: DISP
-      REAL(8), DIMENSION(N1) :: DISPT
-      REAL(8), DIMENSION(40) :: DUMP
-      REAL(8), DIMENSION(40) :: FC
-      REAL(8), DIMENSION(40) :: FW
-      INTEGER, DIMENSION(40) :: LM
-      REAL(8), DIMENSION(NDEG, NDEG) :: TDICOS
+      integer, intent(in) :: ndeg
+      integer, intent(in) :: nnode
+      REAL(8), DIMENSION(N1), intent(inout) :: DISP
+      REAL(8), DIMENSION(N1), intent(inout) :: DISPT
+      REAL(8), DIMENSION(40), intent(in) :: DUMP
+      REAL(8), DIMENSION(NDEG, NDEG), intent(in) :: TDICOS
       
       !Local variables
       INTEGER :: II

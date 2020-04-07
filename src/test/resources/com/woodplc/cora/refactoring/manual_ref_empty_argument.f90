@@ -4,8 +4,8 @@
 !
 !
       SUBROUTINE OPEN_PARAMETER_LOG_FILE(PARA_ANALYSIS_NO, ILOG, PARA_REC_NO, &
-	& FATIGUE_ANALYSIS, axial_capacity_analysis_flag, IDEPLOY_FLAG, iscrn, IIN, IOUT, IADM, &
-	& IALL, ANALYSIS_DIR, STUMP)
+	& FATIGUE_ANALYSIS, axial_capacity_analysis_flag, IDEPLOY_FLAG, iscrn, IIN, IOUT, &
+	& ANALYSIS_DIR, STUMP)
       
       
       
@@ -16,19 +16,17 @@
 
       
       
-      CHARACTER(256) :: ANALYSIS_DIR
-      logical :: FATIGUE_ANALYSIS
-      INTEGER :: IADM
-      INTEGER :: IALL
-      integer :: IDEPLOY_FLAG
-      INTEGER :: IIN
-      integer :: ILOG
-      INTEGER :: IOUT
-      integer :: PARA_ANALYSIS_NO
-      integer :: PARA_REC_NO
-      CHARACTER(256) :: STUMP
-      integer :: axial_capacity_analysis_flag
-      integer :: iscrn
+      CHARACTER(256), intent(in) :: ANALYSIS_DIR
+      logical, intent(inout) :: FATIGUE_ANALYSIS
+      integer, intent(inout) :: IDEPLOY_FLAG
+      INTEGER, intent(in) :: IIN
+      integer, intent(in) :: ILOG
+      INTEGER, intent(in) :: IOUT
+      integer, intent(inout) :: PARA_ANALYSIS_NO
+      integer, intent(out) :: PARA_REC_NO
+      CHARACTER(256), intent(in) :: STUMP
+      integer, intent(in) :: axial_capacity_analysis_flag
+      integer, intent(inout) :: iscrn
       
       !Local variables
       INTEGER :: IDUMMY(7)

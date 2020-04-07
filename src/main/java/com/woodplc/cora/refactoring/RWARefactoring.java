@@ -16,14 +16,17 @@ import java.util.stream.Stream;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenStreamRewriter;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.antlr.v4.runtime.tree.Trees;
 
 import com.google.common.base.Strings;
 import com.google.common.io.MoreFiles;
+import com.woodplc.cora.data.DefAndUseMapper;
 import com.woodplc.cora.data.ModuleVariable;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.grammar.Fortran77Lexer;
@@ -31,9 +34,12 @@ import com.woodplc.cora.grammar.Fortran77Parser;
 import com.woodplc.cora.grammar.Fortran77Parser.AssignmentStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonItemContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.ExecutableStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionSubprogramContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IdentifierContext;
+import com.woodplc.cora.grammar.Fortran77Parser.IntentStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.LhsExpressionContext;
 import com.woodplc.cora.grammar.Fortran77Parser.NamelistContext;
 import com.woodplc.cora.grammar.Fortran77Parser.OnlyListItemContext;
 import com.woodplc.cora.grammar.Fortran77Parser.SubNameContext;
@@ -43,6 +49,7 @@ import com.woodplc.cora.grammar.Fortran77Parser.TypeStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.TypeStatementNameContext;
 import com.woodplc.cora.grammar.Fortran77Parser.UseStatementContext;
 import com.woodplc.cora.grammar.Fortran77ParserBaseListener;
+import com.woodplc.cora.grammar.FuzzyFortranLexer;
 
 class RWARefactoring implements Refactoring {
 	
@@ -72,7 +79,7 @@ class RWARefactoring implements Refactoring {
 		Fortran77Parser parser = new Fortran77Parser(commonTokenStream);
 		ParseTree tree = parser.program();
 		ParseTreeWalker ptw = new ParseTreeWalker();
-		ptw.walk(new RWARewriter(rewriter, systemGraph, cafGraph), tree);
+		ptw.walk(new RWARewriter(rewriter, systemGraph, cafGraph, lexer.fixedForm), tree);
 		return Arrays.asList(rewriter.getText().split(NEW_LINE));			
 	}
 
@@ -81,6 +88,7 @@ class RWARefactoring implements Refactoring {
 		private final TokenStreamRewriter rw;
 		private final SDGraph systemGraph;
 		private final SDGraph cafGraph;
+		private final boolean isFixedForm;
 		private final StringBuilder argumentList;
 		private Set<String> argumentSet;
 		private final Set<ArgumentVariable> variables;
@@ -99,10 +107,18 @@ class RWARefactoring implements Refactoring {
 		private static final String PARAMETER_ALLOCATION_ERROR = "! Error resolved allocation parameter ";
 		private static final int ARGUMENT_OFFSET = 80;
 		
-		public RWARewriter(TokenStreamRewriter rewriter, SDGraph systemGraph, SDGraph cafGraph) {
+		private final DefAndUseMapper defAndUseMapper = new DefAndUseMapper();
+		private ExecutableStatementContext currentExecutableStatement = null;
+		private boolean isLhsExpression = false;
+		
+		private String functionName = null;
+		private static final String fixedOffset = "     ";
+
+		public RWARewriter(TokenStreamRewriter rewriter, SDGraph systemGraph, SDGraph cafGraph, boolean isFixedForm) {
 			this.rw = rewriter; 
 			this.systemGraph = systemGraph;
 			this.cafGraph = cafGraph;
+			this.isFixedForm = isFixedForm;
 			argumentList = new StringBuilder();
 			this.argumentSet = new HashSet<>();
 			this.variables = new HashSet<>();
@@ -118,8 +134,40 @@ class RWARefactoring implements Refactoring {
 		}
 		
 		@Override
+		public void enterExecutableStatement(ExecutableStatementContext ctx) {
+			currentExecutableStatement = ctx;
+		}
+
+
+		@Override
+		public void enterIdentifier(IdentifierContext ctx) {
+			if (currentExecutableStatement != null && !isLhsExpression) {
+				defAndUseMapper.addUse(ctx.getText(), ctx.getStart().getLine(), currentExecutableStatement);
+			}
+		}
+
+		@Override
+		public void exitExecutableStatement(ExecutableStatementContext ctx) {
+			currentExecutableStatement = null;
+		}
+
+
+		@Override
+		public void enterLhsExpression(LhsExpressionContext ctx) {
+			isLhsExpression = true;
+			defAndUseMapper.addDefinition(ctx.expression1().identifier().getText(), ctx.getStart().getLine(), currentExecutableStatement);
+		}
+
+
+		@Override
+		public void exitLhsExpression(LhsExpressionContext ctx) {
+			isLhsExpression = false;
+		}
+
+		@Override
 		public void enterFunctionStatement(FunctionStatementContext ctx) {
 			onEnterSubprogram(ctx.namelist(), ctx.LPAREN(), ctx.subName());
+			functionName = ctx.subName().getText();
 		}
 
 		private void onEnterSubprogram(NamelistContext nlc, TerminalNode lparen, SubNameContext snc) {
@@ -148,15 +196,18 @@ class RWARefactoring implements Refactoring {
 		}
 
 		private void onSubprogramExit() {
+			//System.out.print(defAndUseMapper);
 			StringBuilder output = new StringBuilder();
 			
 			// add common variables to argument list
 			for (Iterator<ArgumentVariable> iterator = localVariables.iterator(); iterator.hasNext();) {
 				ArgumentVariable av = (ArgumentVariable) iterator.next();
 				if (commonItems.contains(av.getName())) {
-					variables.add(av);
+					if (!defAndUseMapper.isGlobalVariableUnused(av.getName())) {
+						variables.add(av);						
+						appendArgumentAndAdjustOffset(av.getName());
+					}
 					iterator.remove();
-					appendArgumentAndAdjustOffset(av.getName());
 				}
 			}
 						
@@ -167,10 +218,15 @@ class RWARefactoring implements Refactoring {
 			String tab = Strings.repeat(" ", typeOffset);
 			
 			for (String error : parameterAllocationErrors) {
-				output.append(error).append("\n").append(tab);
+				if (isFixedForm) {
+					output.append("C ").append(error).append("\n").append(fixedOffset);
+				} else {
+					output.append("! ").append(error).append("\n").append(tab);
+				}
 			}
 			
 			Map<Boolean, List<ArgumentVariable>> varMap = variables.stream()
+				.filter(x -> !defAndUseMapper.isGlobalVariableUnused(x.getName()))
 				.sorted(Comparator.comparing(ArgumentVariable::getName))
 				.collect(partitioningBy(ArgumentVariable::isScalar));
 			for (ArgumentVariable av : varMap.get(true)) {
@@ -181,9 +237,20 @@ class RWARefactoring implements Refactoring {
 				appendOutput(av, output, tab);
 			}
 			
-			output.append("\n").append(tab).append("!Local variables").append("\n").append(tab);
+			if (isFixedForm) {
+				output.append("\n").append("C ").append("Local variables").append("\n").append(fixedOffset + " ");
+			} else {
+				output.append("\n").append(tab).append("!Local variables").append("\n").append(tab);
+			}
 			for (ArgumentVariable av : localVariables) {
-				output.append(av.getDeclaration()).append(av.getName()).append("\n").append(tab);
+				if (defAndUseMapper.isLocalVariableUnused(av.getName())) {
+					for (Map.Entry<Integer, ParserRuleContext> entry : defAndUseMapper.getDefinitions(av.getName()).entrySet()) {
+						ParserRuleContext ctx = entry.getValue();
+						rw.delete(ctx.getStart(), ctx.getStop());
+					}
+				} else {
+					output.append(av.getDeclaration()).append(av.getNameWithDeclaration()).append("\n").append(tab);
+				}
 			}
 			
 			if (firstTypeToken == null || lastTypeToken == null) {
@@ -214,38 +281,48 @@ class RWARefactoring implements Refactoring {
 				} else {
 					throw new IllegalArgumentException();
 				}
-				if (argumentSet.contains(varName)) {
+				if (argumentSet.contains(varName) || (functionName != null && functionName.equalsIgnoreCase(varName))) {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
-						variables.add(ArgumentVariable.ofScalarType(varName, declaration));
+						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
-						variables.add(ArgumentVariable.ofArrayType(varName + oldStyleArrayDeclaration, declaration));
+						variables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentStatement()));					
+						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
+								.stream()
+								.map(x -> x.getText())
+								.collect(Collectors.toList());
+						generateAllocationParameters(allocationParameters, ctx);
 					} else {
-						variables.add(ArgumentVariable.ofArrayType(varName, declaration));
+						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
 					}					
 				} else {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
-						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration));
+						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
-						localVariables.add(ArgumentVariable.ofArrayType(varName + oldStyleArrayDeclaration, declaration));
+						localVariables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentStatement()));
+						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
+								.stream()
+								.map(x -> x.getText())
+								.collect(Collectors.toList());
+						generateAllocationParameters(allocationParameters, ctx);
 					} else {
-						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration));
+						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
 					}		
 				}
 			}
 			
 			for (AssignmentStatementContext asc : ctx.typeStatementNameList().assignmentStatement()) {
-				String varName = asc.expression1(0).getText();
+				String varName = asc.lhsExpression().expression1().getText();
 				if (argumentSet.contains(varName)) {
 					if (ctx.dimensionStatement().isEmpty()) {
-						variables.add(ArgumentVariable.ofScalarType(varName, declaration));
+						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
 					} else {
-						variables.add(ArgumentVariable.ofArrayType(varName, declaration));
+						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
 					}
 				} else {
 					if (ctx.dimensionStatement().isEmpty()) {
-						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration));
+						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
 					} else {
-						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration));
+						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
 					}		
 				}
 			}
@@ -266,8 +343,8 @@ class RWARefactoring implements Refactoring {
 						String variableName = olic.identifier().getText();
 						ModuleVariable mv = systemGraph.getModuleVariable(moduleName, variableName);
 						if (mv != null) {
-							variables.add(new ArgumentVariable(variableName, mv.getType(), mv.getAllocation(), ""));
-							if (!mv.isScalar()) generateAllocationParameters(mv.getAllocationParameters());
+							variables.add(new ArgumentVariable(variableName, mv.getType(), mv.getAllocation(), "", "", false));
+							if (!mv.isScalar()) generateAllocationParameters(mv.getAllocationParameters(), ctx);
 							appendArgumentAndAdjustOffset(variableName);
 						} else {
 							localErrors.append(MODULE_VAR_NOT_FOUND_COMMENT).append(moduleName)
@@ -309,9 +386,18 @@ class RWARefactoring implements Refactoring {
 			if (!argumentSet.contains(variableName)) {
 				if (currentArgumentListOffset + variableName.length() + 3 > ARGUMENT_OFFSET) {
 					if (argumentList.toString().equals("(") || (argumentList.length() == 0 && argumentLastToken.getType() == Fortran77Lexer.LPAREN)) {
-						argumentList.append(" &\n\t& ").append(variableName);
+						if (isFixedForm) {
+							argumentList.append("\n").append(fixedOffset).append("& ").append(variableName);
+						} else {
+							argumentList.append(" &\n\t& ").append(variableName);
+						}
+						
 					} else {
-						argumentList.append(", &\n\t& ").append(variableName);
+						if (isFixedForm) {
+							argumentList.append(",\n").append(fixedOffset).append("& ").append(variableName);
+						} else {
+							argumentList.append(", &\n\t& ").append(variableName);
+						}
 					}
 					currentArgumentListOffset = 6;
 				} else {
@@ -327,7 +413,7 @@ class RWARefactoring implements Refactoring {
 		}
 
 
-		private void generateAllocationParameters(List<String> allocationParameters) {
+		private void generateAllocationParameters(List<String> allocationParameters, ParserRuleContext ctx) {
 			for (String ap : allocationParameters) {
 				Map<String, ModuleVariable> mVar = systemGraph.getAllVariableModules(ap);
 				if (mVar.size() != 1) {
@@ -335,10 +421,11 @@ class RWARefactoring implements Refactoring {
 				} else {
 					mVar.forEach((k,v) -> {
 						if (v.isScalar()) {
-							variables.add(new ArgumentVariable(ap, v.getType(), v.getAllocation(), ""));
+							variables.add(new ArgumentVariable(ap, v.getType(), v.getAllocation(), "", "", false));
+							defAndUseMapper.addUse(ap, ctx.getStart().getLine(), ctx);
 							appendArgumentAndAdjustOffset(ap);
 						} else {
-							generateAllocationParameters(v.getAllocationParameters());
+							generateAllocationParameters(v.getAllocationParameters(), ctx);
 						}
 					});
 				}
@@ -349,17 +436,34 @@ class RWARefactoring implements Refactoring {
 
 		private StringBuilder appendOutput(ArgumentVariable av, StringBuilder output, String tab) {
 			if (av.isExisting()) {
-				output.append(av.getDeclaration()).append(av.getName()).append("\n").append(tab);
+				if (!av.hasIntent) {
+					output
+					.append(av.getDeclaration().replace("::", "").stripTrailing())
+					.append(", intent(")
+					.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
+					.append(")")
+					.append(" :: ");
+				} else {
+					output.append(av.getDeclaration());
+				}
+				output.append(av.getNameWithDeclaration())
+					.append("\n").append(tab);
 			} else {
 				if (av.isScalar()) {
 					output
 						.append(av.getType())
+						.append(", intent(")
+						.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
+						.append(")")
 						.append(" :: ")
 						.append(av.getName())
 						.append("\n").append(tab);
 				} else {
 					output
 						.append(av.getType())
+						.append(", intent(")
+						.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
+						.append(")")
 						.append(", dimension(")
 						.append(av.getAllocation())
 						.append(") :: ")
@@ -378,20 +482,29 @@ class RWARefactoring implements Refactoring {
 		private final String type;
 		private final String allocation;
 		private final String declaration;
+		private final String oldStyleArrayDeclaration;
+		private final boolean hasIntent;
 		
-		private ArgumentVariable(String name, String type, String allocation, String declaration) {
+		private ArgumentVariable(String name, String type, String allocation, String declaration, String oldStyleArrayDeclaration, boolean hasIntent) {
 			this.name = name;
 			this.type = type;
 			this.allocation = allocation;
 			this.declaration = declaration;
+			this.oldStyleArrayDeclaration = oldStyleArrayDeclaration;
+			this.hasIntent = hasIntent;
 		}
 
-		public static ArgumentVariable ofArrayType(String varName, String declaration) {
-			return new ArgumentVariable(varName, "", " ", declaration);
+		public static ArgumentVariable ofOldStyleArrayType(String varName, String oldStyleArrayDeclaration,
+				String declaration, List<IntentStatementContext> list) {
+			return new ArgumentVariable(varName, "", " ", declaration, oldStyleArrayDeclaration, list != null && !list.isEmpty()? true : false);
 		}
 
-		public static ArgumentVariable ofScalarType(String varName, String declaration) {
-			return new ArgumentVariable(varName, "", "", declaration);
+		public static ArgumentVariable ofArrayType(String varName, String declaration, List<IntentStatementContext> list) {
+			return new ArgumentVariable(varName, "", " ", declaration, "", list != null && !list.isEmpty()? true : false);
+		}
+
+		public static ArgumentVariable ofScalarType(String varName, String declaration, List<IntentStatementContext> list) {
+			return new ArgumentVariable(varName, "", "", declaration, "", list != null && !list.isEmpty()? true : false);
 		}
 
 		public boolean isExisting() {
@@ -400,6 +513,10 @@ class RWARefactoring implements Refactoring {
 
 		public String getName() {
 			return name;
+		}
+		
+		public String getNameWithDeclaration() {
+			return name + oldStyleArrayDeclaration;
 		}
 
 		public String getType() {
@@ -422,7 +539,9 @@ class RWARefactoring implements Refactoring {
 			int result = 1;
 			result = prime * result + ((allocation == null) ? 0 : allocation.hashCode());
 			result = prime * result + ((declaration == null) ? 0 : declaration.hashCode());
+			result = prime * result + (hasIntent ? 1231 : 1237);
 			result = prime * result + ((name == null) ? 0 : name.hashCode());
+			result = prime * result + ((oldStyleArrayDeclaration == null) ? 0 : oldStyleArrayDeclaration.hashCode());
 			result = prime * result + ((type == null) ? 0 : type.hashCode());
 			return result;
 		}
@@ -446,10 +565,17 @@ class RWARefactoring implements Refactoring {
 					return false;
 			} else if (!declaration.equals(other.declaration))
 				return false;
+			if (hasIntent != other.hasIntent)
+				return false;
 			if (name == null) {
 				if (other.name != null)
 					return false;
 			} else if (!name.equals(other.name))
+				return false;
+			if (oldStyleArrayDeclaration == null) {
+				if (other.oldStyleArrayDeclaration != null)
+					return false;
+			} else if (!oldStyleArrayDeclaration.equals(other.oldStyleArrayDeclaration))
 				return false;
 			if (type == null) {
 				if (other.type != null)
@@ -458,5 +584,14 @@ class RWARefactoring implements Refactoring {
 				return false;
 			return true;
 		}
+
+		@Override
+		public String toString() {
+			return "ArgumentVariable [name=" + name + ", type=" + type + ", allocation=" + allocation + ", declaration="
+					+ declaration + ", oldStyleArrayDeclaration=" + oldStyleArrayDeclaration + ", hasIntent="
+					+ hasIntent + "]";
+		}
+
+		
 	}
 }

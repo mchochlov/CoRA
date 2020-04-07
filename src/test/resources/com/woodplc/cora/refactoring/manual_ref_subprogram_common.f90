@@ -6,9 +6,8 @@
 ! ****************************************************************************************  
 
 
-subroutine delete_sb_moment_loads(idsbn,node1,node2,disp1, nonp, n1, rlmulg, &
-	& rlmutv, chmax, irigsf, nmsbe, nmsbn, iarbsb, nsbdpt, sbstf, stflat, sslope, &
-	& ielasf, ilatstf)
+subroutine delete_sb_moment_loads(idsbn,node1,node2,disp1, nonp, n1, irigsf, &
+	& nmsbn, ielasf)
  
  implicit none
   ! ----------------------------------------------------------------------
@@ -22,23 +21,13 @@ subroutine delete_sb_moment_loads(idsbn,node1,node2,disp1, nonp, n1, rlmulg, &
 
 
   ! delcared common block types
-  real(8) :: chmax
-  integer :: iarbsb
-  integer :: ielasf
-  integer :: ilatstf
-  integer :: irigsf
-  integer :: n1
-  integer :: nmsbe
-  integer :: nmsbn
+  integer, intent(in) :: ielasf
+  integer, intent(in) :: irigsf
+  integer, intent(in) :: n1
+  integer, intent(in) :: nmsbn
   integer, intent(in)             :: node1
   integer, intent(in)             :: node2
-  integer :: nonp
-  integer :: nsbdpt
-  real(8) :: rlmulg
-  real(8) :: rlmutv
-  real(8) :: sbstf
-  real(8) :: sslope
-  real(8) :: stflat
+  integer, intent(in) :: nonp
   double precision, intent(out)   :: disp1(n1)
   integer, intent(in)             :: idsbn(nonp)
   

@@ -75,7 +75,7 @@ otherSpecificationStatement
    ;
 
 executableStatement
-   : (assignmentStatement | gotoStatement | ifStatement | doStatement | selectStatement | continueStatement | stopStatement | pauseStatement | readStatement | writeStatement | printStatement | rewindStatement | backspaceStatement | openStatement | closeStatement | endfileStatement | inquireStatement | callStatement | returnStatement | formatStatement | exitStatement | bindingStatement | flushStatement |
+   : (gotoStatement | ifStatement | assignmentStatement | doStatement | selectStatement | continueStatement | stopStatement | pauseStatement | readStatement | writeStatement | printStatement | rewindStatement | backspaceStatement | openStatement | closeStatement | endfileStatement | inquireStatement | callStatement | returnStatement | formatStatement | exitStatement | bindingStatement | flushStatement |
    cycleStatement | allocateStatement | deallocateStatement | allocatedStatement | doWhileStatement | macroExecStatement)
    ;
 
@@ -617,8 +617,12 @@ printStatement
    ;
 
 assignmentStatement
-   : expression1 ASSIGN expression1
+   : lhsExpression ASSIGN rhsExpression
    ;
+
+lhsExpression : expression1;
+
+rhsExpression : expression1;
 
 controlInfoList
    : controlInfoListItem (COMMA controlInfoListItem)*
