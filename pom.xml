@@ -11,6 +11,7 @@
 		<antlr.version>4.7.1</antlr.version>
 		<jupiter.version>5.3.1</jupiter.version>
 		<openjfx.version>11.0.1</openjfx.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	
 	<repositories>
@@ -213,14 +214,14 @@
 		<dependency>
         	<groupId>org.openjfx</groupId>
         	<artifactId>javafx-graphics </artifactId>
-        	<version>11</version>
+        	<version>${openjfx.version}</version>
         	<classifier>linux</classifier>
         </dependency>
         		
         <dependency>
         	<groupId>org.openjfx</groupId>
         	<artifactId>javafx-base </artifactId>
-        	<version>11</version>
+        	<version>${openjfx.version}</version>
         	<classifier>linux</classifier>
     	</dependency>
 		
