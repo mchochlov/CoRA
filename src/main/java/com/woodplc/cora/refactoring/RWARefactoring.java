@@ -31,6 +31,7 @@ import com.woodplc.cora.data.ModuleVariable;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.grammar.Fortran77Lexer;
 import com.woodplc.cora.grammar.Fortran77Parser;
+import com.woodplc.cora.grammar.Fortran77Parser.ArrayDeclaratorExtentContext;
 import com.woodplc.cora.grammar.Fortran77Parser.AssignmentStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonItemContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonStatementContext;
@@ -38,6 +39,7 @@ import com.woodplc.cora.grammar.Fortran77Parser.ExecutableStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionSubprogramContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IdentifierContext;
+import com.woodplc.cora.grammar.Fortran77Parser.IntentAttributeContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IntentStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.LhsExpressionContext;
 import com.woodplc.cora.grammar.Fortran77Parser.NamelistContext;
@@ -49,7 +51,6 @@ import com.woodplc.cora.grammar.Fortran77Parser.TypeStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.TypeStatementNameContext;
 import com.woodplc.cora.grammar.Fortran77Parser.UseStatementContext;
 import com.woodplc.cora.grammar.Fortran77ParserBaseListener;
-import com.woodplc.cora.grammar.FuzzyFortranLexer;
 
 class RWARefactoring implements Refactoring {
 	
@@ -93,6 +94,7 @@ class RWARefactoring implements Refactoring {
 		private Set<String> argumentSet;
 		private final Set<ArgumentVariable> variables;
 		private final Set<String> commonItems;
+		private final Set<String> existingIntentArguments;
 		private Token argumentLastToken;
 		private Token firstTypeToken = null;
 		private Token lastTypeToken = null;
@@ -101,6 +103,7 @@ class RWARefactoring implements Refactoring {
 		private int currentArgumentListOffset = 0;
 		private final List<String> parameterAllocationErrors;
 		private final List<ArgumentVariable> localVariables;
+		private final List<String> existingIntentStatements;
 		
 		private static final String MODULE_NOT_FOUND_COMMENT = "! Error: Module not found ";
 		private static final String MODULE_VAR_NOT_FOUND_COMMENT = "! Error: Module variable not found ";
@@ -123,11 +126,23 @@ class RWARefactoring implements Refactoring {
 			this.argumentSet = new HashSet<>();
 			this.variables = new HashSet<>();
 			this.commonItems = new HashSet<>();
+			this.existingIntentArguments = new HashSet<>();
+			this.existingIntentStatements = new ArrayList<>(); 
 			this.parameterAllocationErrors = new ArrayList<>();
 			this.localVariables = new ArrayList<>();
 		}
 
 		
+		@Override
+		public void exitIntentStatement(IntentStatementContext ctx) {
+			rw.delete(ctx.getStart(), ctx.getStop());
+			existingIntentStatements.add(rw.getTokenStream().getText(ctx.getStart(), ctx.getStop()));
+			for (ArrayDeclaratorExtentContext adec : ctx.arrayDeclaratorExtents().arrayDeclaratorExtent()) {
+				existingIntentArguments.add(adec.getText());
+			}
+		}
+
+
 		@Override
 		public void enterSubroutineStatement(SubroutineStatementContext ctx) {
 			onEnterSubprogram(ctx.namelist(), ctx.LPAREN(), ctx.subName());
@@ -236,6 +251,15 @@ class RWARefactoring implements Refactoring {
 			for (ArgumentVariable av : varMap.get(false)) {
 				appendOutput(av, output, tab);
 			}
+			// Append existing intent
+			
+			for (String string : existingIntentStatements) {
+				if (isFixedForm) {
+					output.append("\n").append(fixedOffset + " ").append(string);
+				} else {
+					output.append("\n").append(tab).append(string);
+				}
+			}
 			
 			if (isFixedForm) {
 				output.append("\n").append("C ").append("Local variables").append("\n").append(fixedOffset + " ");
@@ -283,29 +307,29 @@ class RWARefactoring implements Refactoring {
 				}
 				if (argumentSet.contains(varName) || (functionName != null && functionName.equalsIgnoreCase(varName))) {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
-						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
+						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
-						variables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentStatement()));					
+						variables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));					
 						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
 								.stream()
 								.map(x -> x.getText())
 								.collect(Collectors.toList());
 						generateAllocationParameters(allocationParameters, ctx);
 					} else {
-						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
+						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}					
 				} else {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
-						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
+						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
-						localVariables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentStatement()));
+						localVariables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));
 						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
 								.stream()
 								.map(x -> x.getText())
 								.collect(Collectors.toList());
 						generateAllocationParameters(allocationParameters, ctx);
 					} else {
-						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
+						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}		
 				}
 			}
@@ -314,15 +338,15 @@ class RWARefactoring implements Refactoring {
 				String varName = asc.lhsExpression().expression1().getText();
 				if (argumentSet.contains(varName)) {
 					if (ctx.dimensionStatement().isEmpty()) {
-						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
+						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else {
-						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
+						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}
 				} else {
 					if (ctx.dimensionStatement().isEmpty()) {
-						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentStatement()));
+						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else {
-						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentStatement()));
+						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}		
 				}
 			}
@@ -343,7 +367,7 @@ class RWARefactoring implements Refactoring {
 						String variableName = olic.identifier().getText();
 						ModuleVariable mv = systemGraph.getModuleVariable(moduleName, variableName);
 						if (mv != null) {
-							variables.add(new ArgumentVariable(variableName, mv.getType(), mv.getAllocation(), "", "", false));
+							variables.add(ArgumentVariable.fromModule(variableName, mv.getType(), mv.getAllocation()));
 							if (!mv.isScalar()) generateAllocationParameters(mv.getAllocationParameters(), ctx);
 							appendArgumentAndAdjustOffset(variableName);
 						} else {
@@ -421,7 +445,7 @@ class RWARefactoring implements Refactoring {
 				} else {
 					mVar.forEach((k,v) -> {
 						if (v.isScalar()) {
-							variables.add(new ArgumentVariable(ap, v.getType(), v.getAllocation(), "", "", false));
+							variables.add(ArgumentVariable.fromModule(ap, v.getType(), v.getAllocation()));
 							defAndUseMapper.addUse(ap, ctx.getStart().getLine(), ctx);
 							appendArgumentAndAdjustOffset(ap);
 						} else {
@@ -436,7 +460,7 @@ class RWARefactoring implements Refactoring {
 
 		private StringBuilder appendOutput(ArgumentVariable av, StringBuilder output, String tab) {
 			if (av.isExisting()) {
-				if (!av.hasIntent) {
+				if (!av.hasIntent && !existingIntentArguments.contains(av.getName())) {
 					output
 					.append(av.getDeclaration().replace("::", "").stripTrailing())
 					.append(", intent(")
@@ -494,16 +518,20 @@ class RWARefactoring implements Refactoring {
 			this.hasIntent = hasIntent;
 		}
 
+		public static ArgumentVariable fromModule(String variableName, String type, String allocation) {
+			return new ArgumentVariable(variableName, type, allocation, "", "", false);
+		}
+
 		public static ArgumentVariable ofOldStyleArrayType(String varName, String oldStyleArrayDeclaration,
-				String declaration, List<IntentStatementContext> list) {
+				String declaration, List<IntentAttributeContext> list) {
 			return new ArgumentVariable(varName, "", " ", declaration, oldStyleArrayDeclaration, list != null && !list.isEmpty()? true : false);
 		}
 
-		public static ArgumentVariable ofArrayType(String varName, String declaration, List<IntentStatementContext> list) {
+		public static ArgumentVariable ofArrayType(String varName, String declaration, List<IntentAttributeContext> list) {
 			return new ArgumentVariable(varName, "", " ", declaration, "", list != null && !list.isEmpty()? true : false);
 		}
 
-		public static ArgumentVariable ofScalarType(String varName, String declaration, List<IntentStatementContext> list) {
+		public static ArgumentVariable ofScalarType(String varName, String declaration, List<IntentAttributeContext> list) {
 			return new ArgumentVariable(varName, "", "", declaration, "", list != null && !list.isEmpty()? true : false);
 		}
 

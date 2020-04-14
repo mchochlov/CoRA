@@ -16,10 +16,11 @@
       integer, intent(in) :: ndeg
       integer, intent(in) :: nnode
       REAL(8), DIMENSION(N1), intent(inout) :: DISP
-      REAL(8), DIMENSION(N1), intent(inout) :: DISPT
+      REAL(8), DIMENSION(N1) :: DISPT
       REAL(8), DIMENSION(40), intent(in) :: DUMP
       REAL(8), DIMENSION(NDEG, NDEG), intent(in) :: TDICOS
       
+      INTENT (INOUT) DISPT
       !Local variables
       INTEGER :: II
       INTEGER :: J

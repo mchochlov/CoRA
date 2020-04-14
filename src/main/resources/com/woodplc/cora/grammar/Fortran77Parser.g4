@@ -263,8 +263,7 @@ accessSpecifier : PUBLIC | PRIVATE;
 bindingStatement : expression1 BOP expression1;
 
 intentStatement
-	: INTENT LPAREN INTENTION RPAREN
-	| INTENT LPAREN INTENTION RPAREN DOUBLE_COLON? arrayDeclaratorExtents
+	: INTENT LPAREN INTENTION RPAREN DOUBLE_COLON? arrayDeclaratorExtents
 	;
 	
 dimensionStatement
@@ -335,9 +334,11 @@ onlyList : onlyListItem (COMMA onlyListItem)*;
 onlyListItem : identifier | bindingStatement;
 
 typeStatement
-   : typename (COMMA (dimensionStatement|intentStatement| PARAMETER| ALLOCATABLE| accessSpecifier | OPTIONAL | SAVE | EXTERNAL | TARGET | POINTER | PROTECTED))* DOUBLE_COLON? typeStatementNameList
+   : typename (COMMA (dimensionStatement|intentAttribute| PARAMETER| ALLOCATABLE| accessSpecifier | OPTIONAL | SAVE | EXTERNAL | TARGET | POINTER | PROTECTED))* DOUBLE_COLON? typeStatementNameList
 //| characterWithLen typeStatementNameCharList
    ;
+
+intentAttribute : INTENT LPAREN INTENTION RPAREN;
 
 typeStatementNameList
    : typeStatementName (COMMA typeStatementName)*
