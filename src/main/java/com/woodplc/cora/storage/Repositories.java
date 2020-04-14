@@ -15,6 +15,7 @@ import com.woodplc.cora.parser.Parsers;
 
 public final class Repositories {
 
+	public final static String DATA_FOLDER = "data";
 	private final static String ROOT_FOLDER = ".cora";
 	private final static Repository SINGLETON = new FSRepository();
 	private final static HashFunction checksumFunction = Hashing.crc32();
@@ -25,7 +26,7 @@ public final class Repositories {
 	public static Repository getInstance() {return SINGLETON;}
 
 	public static Path pathForCheckSum(String checkSum) {
-		return Paths.get(ROOT_FOLDER, Objects.requireNonNull(checkSum));
+		return Paths.get(DATA_FOLDER, ROOT_FOLDER, Objects.requireNonNull(checkSum));
 	}
 
 	public static String checkSumForPath(Path path) throws IOException {

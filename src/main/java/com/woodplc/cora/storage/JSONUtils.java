@@ -26,7 +26,7 @@ import com.woodplc.cora.data.SubProgram;
 
 public final class JSONUtils {
 
-	private static final Path STATE_JSON_FILENAME = Paths.get("last_state.json");
+	private static final Path STATE_JSON_FILENAME = Paths.get(Repositories.DATA_FOLDER, "last_state.json");
 	private static final String SDGRAPH_JSON_FILENAME = "sdgraph.json";
 	private static final Gson SDGRAPH_TO_GSON = new GsonBuilder()
 			.registerTypeHierarchyAdapter(SDGraph.class, new GraphAdapter())
@@ -70,6 +70,7 @@ public final class JSONUtils {
 		Objects.requireNonNull(state);
 		String jsonString = STATE_TO_GSON.toJson(state);
 
+		Files.createDirectories(Paths.get(Repositories.DATA_FOLDER));
 		Files.write(STATE_JSON_FILENAME, jsonString.getBytes());
 	}
 	

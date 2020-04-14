@@ -10,7 +10,7 @@
 		<lucene.version>7.5.0</lucene.version>
 		<antlr.version>4.7.1</antlr.version>
 		<jupiter.version>5.3.1</jupiter.version>
-		<openjfx.version>11.0.1</openjfx.version>
+		<openjfx.version>14</openjfx.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	
@@ -182,6 +182,13 @@
     		<groupId>org.fxmisc.richtext</groupId>
     		<artifactId>richtextfx</artifactId>
     		<version>0.9.1</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+		<dependency>
+    		<groupId>org.apache.commons</groupId>
+    		<artifactId>commons-lang3</artifactId>
+    		<version>3.9</version>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.openjfx/javafx-controls -->
