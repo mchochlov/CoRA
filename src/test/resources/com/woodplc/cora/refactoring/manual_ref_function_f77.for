@@ -8,7 +8,7 @@ C
 C Dummy arguments
 C
       REAL(8) :: ANGCOS
-      REAL(8), intent(out) :: ANGLE
+      REAL(8) :: ANGLE
       REAL(8) :: ANGSIN
       real(8), intent(in) :: PI
       

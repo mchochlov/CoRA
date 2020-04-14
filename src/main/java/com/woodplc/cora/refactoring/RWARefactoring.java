@@ -457,16 +457,18 @@ class RWARefactoring implements Refactoring {
 			
 		}
 
+		private boolean isVariableFunctionName(String varName) {
+			return functionName != null && functionName.equals(varName) ? true : false;
+		}
 
 		private StringBuilder appendOutput(ArgumentVariable av, StringBuilder output, String tab) {
 			if (av.isExisting()) {
-				if (!av.hasIntent && !existingIntentArguments.contains(av.getName())) {
+				if (!av.hasIntent && !existingIntentArguments.contains(av.getName())
+						&& !isVariableFunctionName(av.getName())) {
 					output
-					.append(av.getDeclaration().replace("::", "").stripTrailing())
-					.append(", intent(")
-					.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
-					.append(")")
-					.append(" :: ");
+					.append(av.getDeclaration().replace("::", "").stripTrailing());
+					generateIntent(av, output);
+					output.append(" :: ");
 				} else {
 					output.append(av.getDeclaration());
 				}
@@ -475,20 +477,16 @@ class RWARefactoring implements Refactoring {
 			} else {
 				if (av.isScalar()) {
 					output
-						.append(av.getType())
-						.append(", intent(")
-						.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
-						.append(")")
-						.append(" :: ")
+						.append(av.getType());
+					generateIntent(av, output);
+					output.append(" :: ")
 						.append(av.getName())
 						.append("\n").append(tab);
 				} else {
 					output
-						.append(av.getType())
-						.append(", intent(")
-						.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
-						.append(")")
-						.append(", dimension(")
+						.append(av.getType());
+					generateIntent(av, output);	
+					output.append(", dimension(")
 						.append(av.getAllocation())
 						.append(") :: ")
 						.append(av.getName())
@@ -497,9 +495,17 @@ class RWARefactoring implements Refactoring {
 			}
 			return output;
 		}
-
-
+		
+		private void generateIntent(ArgumentVariable av, StringBuilder output) {
+			if (!av.getType().equals("external")) {
+				output.append(", intent(")
+				.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
+				.append(")");	
+			}
+		}
 	}
+	
+	
 	
 	private final static class ArgumentVariable {
 		private final String name;
