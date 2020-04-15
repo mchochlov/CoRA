@@ -11,15 +11,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.Traverser;
@@ -30,12 +31,13 @@ public final class GuavaBasedSDGraph implements SDGraph {
 	private final Set<SubProgram> subprograms;
 	private final MutableGraph<String> subprogramCallGraph;
 	private final SetMultimap<String, String> variableCallees;
+	private final Set<String> allModules;
 	
 	private transient ImmutableSet<String> unreferencedSubprograms = null;
 	private transient ImmutableSet<String> externalSubprograms =  null;
 	
 	GuavaBasedSDGraph() {
-		moduleVariableMap = HashBasedTable.create();
+		moduleVariableMap = TreeBasedTable.create(String.CASE_INSENSITIVE_ORDER, String.CASE_INSENSITIVE_ORDER);
 		subprograms = new HashSet<>();
 		subprogramCallGraph = GraphBuilder
 				.directed()
@@ -45,25 +47,9 @@ public final class GuavaBasedSDGraph implements SDGraph {
 				.hashKeys()
 				.hashSetValues()
 				.build();
+		allModules = new HashSet<>();
 	}
 	
-	GuavaBasedSDGraph(Set<SubProgram> subprograms, 
-			Set<CallEdge> edges,
-			Map<String, Collection<String>> variables) {
-		this();
-		Objects.requireNonNull(subprograms);
-		Objects.requireNonNull(edges);
-		Objects.requireNonNull(variables);
-		
-		this.subprograms.addAll(subprograms);
-		this.subprograms.stream()
-				.map(SubProgram::name)
-				.forEach(subprogramCallGraph::addNode);
-		
-		edges.forEach(edge -> subprogramCallGraph.putEdge(edge.source(), edge.target()));
-		variables.forEach(variableCallees::putAll);
-	}
-
 	@Override
 	public void addVariablesAndCallees(Set<String> variables, Set<String> callees) {
 		Objects.requireNonNull(variables);
@@ -151,6 +137,7 @@ public final class GuavaBasedSDGraph implements SDGraph {
 		this.subprograms.addAll(g.subprograms);
 		this.moduleVariableMap.putAll(g.moduleVariableMap);
 		this.variableCallees.putAll(g.variableCallees);
+		this.allModules.addAll(g.allModules);
 		g = null;
 	}
 
@@ -167,7 +154,9 @@ public final class GuavaBasedSDGraph implements SDGraph {
 	public boolean isEmpty() {
 		return subprograms.isEmpty() 
 				&& subprogramCallGraph.nodes().isEmpty() 
-				&& variableCallees.isEmpty();
+				&& variableCallees.isEmpty()
+				&& moduleVariableMap.isEmpty()
+				&& allModules.isEmpty();
 	}
 
 	@Override
@@ -198,12 +187,13 @@ public final class GuavaBasedSDGraph implements SDGraph {
 		return this.subprograms.equals(g.subprograms)
 				&& this.moduleVariableMap.equals(g.moduleVariableMap)
 				&& this.subprogramCallGraph.equals(g.subprogramCallGraph)
-				&& this.variableCallees.equals(g.variableCallees);
+				&& this.variableCallees.equals(g.variableCallees)
+				&& this.allModules.equals(g.allModules);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.subprograms, this.moduleVariableMap, this.subprogramCallGraph, this.variableCallees);
+		return Objects.hash(this.subprograms, this.moduleVariableMap, this.subprogramCallGraph, this.variableCallees, this.allModules);
 	}
 
 	@Override
@@ -272,7 +262,9 @@ public final class GuavaBasedSDGraph implements SDGraph {
 
 	@Override
 	public Set<String> modules() {
-		return moduleVariableMap.rowKeySet();
+		Set<String> ts = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		ts.addAll(allModules);
+		return ts;
 	}
 
 	@Override
@@ -297,6 +289,8 @@ public final class GuavaBasedSDGraph implements SDGraph {
 	public Set<String> getAllModuleVariables(String moduleName) {
 		return moduleVariableMap.row(moduleName).keySet();
 	}
+	
+	
 
 	@Override
 	public void addGraphNodes(Set<SubProgram> subprograms) {
@@ -305,5 +299,15 @@ public final class GuavaBasedSDGraph implements SDGraph {
 			subprogramCallGraph.addNode(subProgram.name());
 		}
 		
+	}
+
+	@Override
+	public Map<String, ModuleVariable> getAllVariableModules(String variableName) {
+		return moduleVariableMap.column(variableName);
+	}
+
+	@Override
+	public void addModule(String currentModule) {
+		this.allModules.add(currentModule);
 	}
 }

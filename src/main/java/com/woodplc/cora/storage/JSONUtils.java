@@ -10,11 +10,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 import com.google.common.graph.EndpointPair;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
@@ -187,7 +186,7 @@ public final class JSONUtils {
         public Table<R,C,V> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
                 throws JsonParseException {
             Map<R, Map<C,V>> asMap = context.deserialize(json, asMapType(typeOfT));
-            Table<R,C,V> table = HashBasedTable.create();
+            Table<R,C,V> table = (Table<R, C, V>) TreeBasedTable.create(String.CASE_INSENSITIVE_ORDER, String.CASE_INSENSITIVE_ORDER);
             for (Map.Entry<R, Map<C,V>> entry : asMap.entrySet()) {
             	for (Map.Entry<C, V> entry2 : entry.getValue().entrySet()) {
             		table.put(entry.getKey(), entry2.getKey(), entry2.getValue());

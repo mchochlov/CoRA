@@ -51,6 +51,10 @@ public interface SDGraph {
 	ModuleVariable getModuleVariable(String moduleName, String variableName);
 
 	Set<String> getAllModuleVariables(String moduleName);
+	
+	Map<String, ModuleVariable> getAllVariableModules(String variableName);
 
 	void addModuleVariable(String moduleName, String variableName, ModuleVariable moduleVariable);
+
+	void addModule(String currentModule);
 }
