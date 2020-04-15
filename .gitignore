@@ -4,5 +4,6 @@ target/
 bin/
 .settings/
 index/
+data/
 /last_state.json
 .cora

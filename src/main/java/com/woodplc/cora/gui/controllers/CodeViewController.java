@@ -1,15 +1,14 @@
 package com.woodplc.cora.gui.controllers;
 
-import java.nio.charset.Charset;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
 import com.woodplc.cora.data.SubProgram;
+import com.woodplc.cora.utils.Utils;
 
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -64,11 +63,8 @@ class CodeViewController extends Controller {
 		}
 		
 		@Override
-		protected List<String> call() throws Exception {
-			return Files.lines(this.subprogram.path(), Charset.defaultCharset())
-					//.limit(this.subprogram.endLine())
-					//.skip(this.subprogram.startLine())
-					.collect(Collectors.toList());
+		protected List<String> call() throws IOException {
+			return Utils.readAllFromFile(this.subprogram.path());
 		}
 		
 	}

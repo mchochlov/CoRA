@@ -2,8 +2,6 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,9 +11,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.apache.commons.lang3.SystemUtils;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
@@ -34,6 +35,7 @@ import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 import com.woodplc.cora.utils.CSVUtils;
+import com.woodplc.cora.utils.Utils;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -52,6 +54,8 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
@@ -59,6 +63,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
@@ -69,7 +74,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 public class CoRAMainController {
-		
+	    
 	private static final double DOUBLE_ZERO = 0;
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
 	private final FileChooser exportChooser = new FileChooser();
@@ -79,6 +84,7 @@ public class CoRAMainController {
 	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
 	private final Alert featureIsEmpty = new Alert(AlertType.INFORMATION, Main.getResources().getString("feature_empty"));
 	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
+	private final Alert aboutAlert = new Alert(AlertType.INFORMATION, Main.getResources().getString("cora_about"));
 	
 	private final ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<SearchEntryView> filteredSearchResults = new FilteredList<>(searchResults);
@@ -166,6 +172,18 @@ public class CoRAMainController {
     @FXML
     private Label locCLbl;
     
+    @FXML
+    private MenuBar menuBar;
+	@FXML
+    private Menu fileMenu;
+	@FXML
+	private Menu analysisMenu;
+	@FXML
+	private Menu helpMenu;
+	private Stack<String> commandStack = new Stack<>();
+	@FXML
+	private BorderPane borderPane;
+
     // TAB 2
     @FXML
 	private TableColumn<RefactoringCaseView, String> caseClmnName;
@@ -205,8 +223,66 @@ public class CoRAMainController {
 	}
 
 	@FXML
-	void initialize() {
-		initializeModule(moduleA, systemADirFld, systemALbl, systemABottomLbl, systemAParseBtn, systemAProgressBar);
+	void initialize() {     
+
+		if (SystemUtils.IS_OS_LINUX) {
+			
+			graphNotFoundAlert.initModality(Modality.NONE);
+			multipleSelectionAlert.initModality(Modality.NONE);
+			featureIsEmpty.initModality(Modality.NONE);
+			illegalStateAlert.initModality(Modality.NONE);
+			aboutAlert.initModality(Modality.NONE);
+			
+			fileMenu.setOnHiding(e -> commandStack.push("file"));
+			
+			analysisMenu.setOnHiding(e -> commandStack.push("analysis"));
+			
+			helpMenu.setOnHiding(e -> commandStack.push("help"));
+			
+		    menuBar.addEventFilter(MouseEvent.MOUSE_CLICKED, e -> {
+		    		
+		    	if (!commandStack.isEmpty()) {
+		    		String command = commandStack.peek();
+					if (command.equals("file")) {
+						if (commandStack.size() > 1) {
+							commandStack.clear();
+							fileMenu.hide();
+							//System.out.println("file hide " + commandStack);
+						} else if (commandStack.size() == 1) {
+							fileMenu.show();
+							//System.out.println("file show " + commandStack);
+						}
+					}
+					
+					if (command.equals("analysis")) {
+						if (commandStack.size() > 1) {
+							commandStack.clear();
+							analysisMenu.hide();
+							//System.out.println("analysis hide " + commandStack);
+
+						} else if (commandStack.size() == 1) {
+							analysisMenu.show();
+							//System.out.println("analysis show " + commandStack);
+						}
+					}
+					
+					if (command.equals("help")) {
+						if (commandStack.size() > 1) {
+							commandStack.clear();
+							helpMenu.hide();
+							//System.out.println("help hide " + commandStack);
+						} else if (commandStack.size() == 1) {
+							helpMenu.show();
+							//System.out.println("help show " + commandStack);
+						}
+					}
+
+				}
+			
+	    	});
+		}
+
+	    initializeModule(moduleA, systemADirFld, systemALbl, systemABottomLbl, systemAParseBtn, systemAProgressBar);
 		initializeModule(moduleB, systemBDirFld, systemBLbl, systemBBottomLbl, systemBParseBtn, systemBProgressBar);
 		initializeModule(moduleC, systemCDirFld, systemCLbl, systemCBottomLbl, systemCParseBtn, systemCProgressBar);
 		
@@ -355,7 +431,7 @@ public class CoRAMainController {
 	private void open(ModuleContainer module, ProgressBar pBar, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
-		File selectedDir = dirChooser.showDialog(txtField.getScene().getWindow());
+		File selectedDir = SystemUtils.IS_OS_LINUX ? dirChooser.showDialog(null) : dirChooser.showDialog(txtField.getScene().getWindow());
 		if (selectedDir != null) {
 			if (selectedDir.toPath().getFileName() == null) throw new IllegalArgumentException();
 			txtField.setText(selectedDir.getAbsolutePath());
@@ -625,7 +701,11 @@ public class CoRAMainController {
 		Stage stage = new Stage();
 		stage.setScene(scene);
 		stage.setTitle(Main.getResources().getString(title));
-		stage.initModality(modality);
+		if (SystemUtils.IS_OS_LINUX) {
+			stage.initModality(Modality.NONE);
+		} else {
+			stage.initModality(modality);
+		}
 		stage.show();
 	}
 	
@@ -706,8 +786,10 @@ public class CoRAMainController {
 	
 	@FXML
     void about(ActionEvent event) {
-		new Alert(AlertType.INFORMATION, Main.getResources()
-				.getString("cora_about")).showAndWait();
+		aboutAlert.showAndWait();
+		if (SystemUtils.IS_OS_LINUX) {
+			commandStack.clear();
+		}
     }
 	
 	@FXML
@@ -717,6 +799,10 @@ public class CoRAMainController {
 	void exportToJson(ActionEvent event) {exportFeature(ExportType.JSON);}
 		
     private void exportFeature(ExportType exportType) {
+    	if (SystemUtils.IS_OS_LINUX) {
+			commandStack.clear();
+		}
+    	
     	if (feature == null || feature.isEmpty()) {
     		featureIsEmpty.showAndWait();
     		return;
@@ -739,7 +825,7 @@ public class CoRAMainController {
     	}
     	
     	exportChooser.getExtensionFilters().addAll(ef);
-    	File selectedFile = exportChooser.showSaveDialog(systemALbl.getScene().getWindow());
+    	File selectedFile = SystemUtils.IS_OS_LINUX ? exportChooser.showSaveDialog(null) : exportChooser.showSaveDialog(systemALbl.getScene().getWindow());
     	if (selectedFile != null) {
     		final Path exportPath = selectedFile.toPath();
     		Task<Void> exportTask = new Task<Void>() {
@@ -800,17 +886,38 @@ public class CoRAMainController {
 	
     @FXML
     void locSystemA(ActionEvent event) {
-    	calculateLoc(locALbl, feature.systemASubprograms(), moduleA.getModule().getGraph());
+    	if (SystemUtils.IS_OS_LINUX) {
+			commandStack.clear();
+		}
+    	if (feature.systemASubprograms().isEmpty() || moduleA.getModule() == null) {
+    		locALbl.setText("0 " + Main.getResources().getString("loc"));
+		} else {
+			calculateLoc(locALbl, feature.systemASubprograms(), moduleA.getModule().getGraph());
+		}
     }
 
     @FXML
     void locSystemB(ActionEvent event) {
-    	calculateLoc(locBLbl, feature.systemBSubprograms(), moduleB.getModule().getGraph());
+    	if (SystemUtils.IS_OS_LINUX) {
+			commandStack.clear();
+		}
+    	if (feature.systemBSubprograms().isEmpty() || moduleB.getModule() == null) {
+    		locBLbl.setText("0 " + Main.getResources().getString("loc"));
+		} else {
+			calculateLoc(locBLbl, feature.systemBSubprograms(), moduleB.getModule().getGraph());
+		}
     }
 
     @FXML
     void locSystemC(ActionEvent event) {
-    	calculateLoc(locCLbl, feature.systemCSubprograms(), moduleC.getModule().getGraph());
+    	if (SystemUtils.IS_OS_LINUX) {
+			commandStack.clear();
+		}
+    	if (feature.systemCSubprograms().isEmpty() || moduleC.getModule() == null) {
+    		locCLbl.setText("0 " + Main.getResources().getString("loc"));
+		} else {
+			calculateLoc(locCLbl, feature.systemCSubprograms(), moduleC.getModule().getGraph());
+		}
     }
     
     @FXML
@@ -874,7 +981,7 @@ public class CoRAMainController {
 			long loc = 0;
 			
 			for (SubProgram subprogram : subprograms) {
-				try(Stream<String> lines = Files.lines(subprogram.path(), Charset.defaultCharset())){
+				try(Stream<String> lines = Utils.readAllFromFile(subprogram.path()).stream()){
 					loc += 
 							lines.limit(subprogram.endLine())
 							.skip(subprogram.startLine())

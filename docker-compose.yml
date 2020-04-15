@@ -1,0 +1,15 @@
+version: '3.4'
+services:
+  cora:
+    build: .
+    container_name: cora
+    image: mchochlov/cora:0.1.7-bugfix
+    environment:
+      - DISPLAY=192.168.0.17:0.0
+      - NO_AT_BRIDGE=1
+    volumes:
+      - //c:/source
+      - cora:/usr/src/cora/data
+volumes:
+  cora:
+    name: cora-data

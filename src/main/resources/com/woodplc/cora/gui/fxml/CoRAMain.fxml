@@ -19,7 +19,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
+<BorderPane fx:id="borderPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
    <center>
       <TabPane prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
         <tabs>
@@ -62,8 +62,8 @@
                                        <children>
                                           <HBox spacing="10.0">
                                              <children>
-                                                <Label prefWidth="60.0" text="%system_a_lbl" />
-                                                <Label fx:id="systemABottomLbl" prefWidth="55.0" />
+                                                <Label text="%system_a_lbl" />
+                                                <Label fx:id="systemABottomLbl" />
                                              </children>
                                           </HBox>
                                           <ListView fx:id="systemASubprogramList" onMouseClicked="#viewSubprogramCodeSystemA" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
@@ -91,8 +91,8 @@
                                        <children>
                                           <HBox spacing="10.0">
                                              <children>
-                                                <Label prefWidth="60.0" text="%system_b_lbl" />
-                                                <Label fx:id="systemBBottomLbl" prefWidth="55.0" />
+                                                <Label text="%system_b_lbl" />
+                                                <Label fx:id="systemBBottomLbl" />
                                              </children>
                                           </HBox>
                                           <ListView fx:id="systemBSubprogramList" onMouseClicked="#viewSubprogramCodeSystemB" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
@@ -118,8 +118,8 @@
                                        <children>
                                           <HBox spacing="10.0">
                                              <children>
-                                                <Label prefWidth="60.0" text="%system_c_lbl" />
-                                                <Label fx:id="systemCBottomLbl" prefWidth="55.0" />
+                                                <Label text="%system_c_lbl" />
+                                                <Label fx:id="systemCBottomLbl" />
                                              </children>
                                           </HBox>
                                           <ListView fx:id="systemCSubprogramList" onMouseClicked="#viewSubprogramCodeSystemC" prefHeight="180.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
@@ -160,12 +160,12 @@
                            <children>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label prefWidth="60.0" text="%system_a_lbl">
+                                    <Label text="%system_a_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="55.0">
+                                    <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="60.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -185,12 +185,12 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label prefWidth="60.0" text="%system_b_lbl">
+                                    <Label text="%system_b_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="55.0">
+                                    <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="60.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -210,12 +210,12 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label prefWidth="60.0" text="%system_c_lbl">
+                                    <Label text="%system_c_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemCLbl" prefWidth="55.0">
+                                    <Label fx:id="systemCLbl" minWidth="-Infinity" prefWidth="60.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -263,9 +263,9 @@
       </TabPane>
    </center>
    <top>
-      <MenuBar>
+      <MenuBar fx:id="menuBar">
          <menus>
-            <Menu mnemonicParsing="false" text="%menubar.file">
+            <Menu fx:id="fileMenu" mnemonicParsing="false" text="%menubar.file">
                <items>
                   <Menu mnemonicParsing="false" text="%menubar.file.export">
                      <items>
@@ -276,7 +276,7 @@
                   <MenuItem mnemonicParsing="false" onAction="#quit" text="%menubar.file.quit" />
                </items>
             </Menu>
-            <Menu mnemonicParsing="false" text="%menubar.analysis">
+            <Menu fx:id="analysisMenu" mnemonicParsing="false" text="%menubar.analysis">
                <items>
                   <Menu mnemonicParsing="false" text="%menubar.analysis.loc">
                      <items>
@@ -287,7 +287,7 @@
                   </Menu>
                </items>
             </Menu>
-            <Menu mnemonicParsing="false" text="%menubar.help">
+            <Menu fx:id="helpMenu" mnemonicParsing="false" text="%menubar.help">
                <items>
                   <MenuItem mnemonicParsing="false" onAction="#about" text="%menubar.help.about" />
                </items>
