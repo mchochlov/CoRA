@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -32,15 +33,20 @@ import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.grammar.Fortran77Lexer;
 import com.woodplc.cora.grammar.Fortran77Parser;
 import com.woodplc.cora.grammar.Fortran77Parser.ArrayDeclaratorExtentContext;
+import com.woodplc.cora.grammar.Fortran77Parser.ArrayOrFunctionExpressionContext;
 import com.woodplc.cora.grammar.Fortran77Parser.AssignmentStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.CallArgumentContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonItemContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.ControlInfoListContext;
 import com.woodplc.cora.grammar.Fortran77Parser.ExecutableStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.Expression1Context;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.FunctionSubprogramContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IdentifierContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IntentAttributeContext;
 import com.woodplc.cora.grammar.Fortran77Parser.IntentStatementContext;
+import com.woodplc.cora.grammar.Fortran77Parser.IoListItem2Context;
 import com.woodplc.cora.grammar.Fortran77Parser.LhsExpressionContext;
 import com.woodplc.cora.grammar.Fortran77Parser.NamelistContext;
 import com.woodplc.cora.grammar.Fortran77Parser.OnlyListItemContext;
@@ -95,6 +101,7 @@ class RWARefactoring implements Refactoring {
 		private final Set<ArgumentVariable> variables;
 		private final Set<String> commonItems;
 		private final Set<String> existingIntentArguments;
+		private final Set<String> callArguments;
 		private Token argumentLastToken;
 		private Token firstTypeToken = null;
 		private Token lastTypeToken = null;
@@ -104,6 +111,8 @@ class RWARefactoring implements Refactoring {
 		private final List<String> parameterAllocationErrors;
 		private final List<ArgumentVariable> localVariables;
 		private final List<String> existingIntentStatements;
+		private final Set<String> ioItems;
+		private final Set<String> arrayNames;
 		
 		private static final String MODULE_NOT_FOUND_COMMENT = "! Error: Module not found ";
 		private static final String MODULE_VAR_NOT_FOUND_COMMENT = "! Error: Module variable not found ";
@@ -123,15 +132,31 @@ class RWARefactoring implements Refactoring {
 			this.cafGraph = cafGraph;
 			this.isFixedForm = isFixedForm;
 			argumentList = new StringBuilder();
-			this.argumentSet = new HashSet<>();
+			this.argumentSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			this.variables = new HashSet<>();
-			this.commonItems = new HashSet<>();
-			this.existingIntentArguments = new HashSet<>();
+			this.commonItems = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			this.existingIntentArguments = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			this.existingIntentStatements = new ArrayList<>(); 
+			this.callArguments = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			this.parameterAllocationErrors = new ArrayList<>();
 			this.localVariables = new ArrayList<>();
+			this.ioItems = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			this.arrayNames =  new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 		}
 
+		@Override
+		public void exitIoListItem2(IoListItem2Context ctx) {
+			if (ctx.expression1() != null && ctx.expression1().identifier() != null) {
+				ioItems.add(ctx.expression1().identifier().getText());
+			}
+		}
+
+		@Override
+		public void exitCallArgument(CallArgumentContext ctx) {
+			if (ctx.expression1() != null && ctx.expression1().identifier() != null ){
+				callArguments.add(ctx.expression1().identifier().getText());
+			}
+		}
 		
 		@Override
 		public void exitIntentStatement(IntentStatementContext ctx) {
@@ -170,7 +195,15 @@ class RWARefactoring implements Refactoring {
 		@Override
 		public void enterLhsExpression(LhsExpressionContext ctx) {
 			isLhsExpression = true;
-			defAndUseMapper.addDefinition(ctx.expression1().identifier().getText(), ctx.getStart().getLine(), currentExecutableStatement);
+			String variable = null;
+			if (ctx.expression1().identifier() != null) {
+				variable = ctx.expression1().identifier().getText();
+			} else if (ctx.expression1().arrayOrFunctionExpression() != null) {
+				variable = ctx.expression1().arrayOrFunctionExpression().identifier().getText();
+			} else {
+				throw new IllegalStateException();
+			}
+			defAndUseMapper.addDefinition(variable, ctx.getStart().getLine(), currentExecutableStatement);
 		}
 
 
@@ -309,6 +342,7 @@ class RWARefactoring implements Refactoring {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
 						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
+						arrayNames.add(varName);
 						variables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));					
 						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
 								.stream()
@@ -316,12 +350,14 @@ class RWARefactoring implements Refactoring {
 								.collect(Collectors.toList());
 						generateAllocationParameters(allocationParameters, ctx);
 					} else {
+						arrayNames.add(varName);
 						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}					
 				} else {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
 						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
+						arrayNames.add(varName);
 						localVariables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));
 						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
 								.stream()
@@ -329,6 +365,7 @@ class RWARefactoring implements Refactoring {
 								.collect(Collectors.toList());
 						generateAllocationParameters(allocationParameters, ctx);
 					} else {
+						arrayNames.add(varName);
 						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}		
 				}
@@ -340,12 +377,14 @@ class RWARefactoring implements Refactoring {
 					if (ctx.dimensionStatement().isEmpty()) {
 						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else {
+						arrayNames.add(varName);
 						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}
 				} else {
 					if (ctx.dimensionStatement().isEmpty()) {
 						localVariables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else {
+						arrayNames.add(varName);
 						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
 					}		
 				}
@@ -368,7 +407,10 @@ class RWARefactoring implements Refactoring {
 						ModuleVariable mv = systemGraph.getModuleVariable(moduleName, variableName);
 						if (mv != null) {
 							variables.add(ArgumentVariable.fromModule(variableName, mv.getType(), mv.getAllocation()));
-							if (!mv.isScalar()) generateAllocationParameters(mv.getAllocationParameters(), ctx);
+							if (!mv.isScalar()) {
+								arrayNames.add(variableName);
+								generateAllocationParameters(mv.getAllocationParameters(), ctx);
+							}
 							appendArgumentAndAdjustOffset(variableName);
 						} else {
 							localErrors.append(MODULE_VAR_NOT_FOUND_COMMENT).append(moduleName)
@@ -393,10 +435,25 @@ class RWARefactoring implements Refactoring {
 					rw.insertBefore(ctx.getStart(), MODULE_NOT_FOUND_COMMENT + moduleName + "\n" + tab);
 				}
 			}
+		}		
+		
+		@Override
+		public void exitArrayOrFunctionExpression(ArrayOrFunctionExpressionContext ctx) {
+			if (!arrayNames.contains(ctx.identifier().getText()) && ctx.exprList1() != null) {
+				for (Expression1Context ec : ctx.exprList1().expression1()) {
+					if (ec.identifier() != null) callArguments.add(ec.identifier().getText());
+				}
+			}
 		}
-		
-		
-		
+
+		@Override
+		public void exitControlInfoList(ControlInfoListContext ctx) {
+			callArguments.addAll(Trees.findAllRuleNodes(ctx, Fortran77Parser.RULE_identifier)
+					.stream()
+					.map(x -> x.getText())
+					.collect(Collectors.toSet()));
+		}
+
 		@Override
 		public void exitCommonStatement(CommonStatementContext ctx) {
 			for (CommonItemContext cic : ctx.commonBlock(0).commonItems().commonItem()) {
@@ -497,7 +554,8 @@ class RWARefactoring implements Refactoring {
 		}
 		
 		private void generateIntent(ArgumentVariable av, StringBuilder output) {
-			if (!av.getType().equals("external")) {
+			if (!av.getType().equals("external") && !callArguments.contains(av.getName())
+					&& !ioItems.contains(av.getName())) {
 				output.append(", intent(")
 				.append(defAndUseMapper.getGlobalVariableIntent(av.getName()))
 				.append(")");	

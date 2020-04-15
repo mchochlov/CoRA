@@ -63,7 +63,7 @@ class RefactoringTest {
 		
 		Refactoring refactoring = Refactorings.createRWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 		List<String> autoRefactoredSubprogram = refactoring.refactor();
-		autoRefactoredSubprogram.forEach(System.out::println);
+		//autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 	}
 
@@ -86,7 +86,7 @@ class RefactoringTest {
 		
 		Refactoring refactoring = Refactorings.createRWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 		List<String> autoRefactoredSubprogram = refactoring.refactor();
-		autoRefactoredSubprogram.forEach(System.out::println);
+		//autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 		
 		//with common array
@@ -98,7 +98,7 @@ class RefactoringTest {
 		assertFalse(manuallyRefactoredSubprogram.isEmpty());
 		refactoring = Refactorings.createRWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 		autoRefactoredSubprogram = refactoring.refactor();
-		autoRefactoredSubprogram.forEach(System.out::println);
+		//autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 		
 		//with empty arg list
@@ -110,7 +110,7 @@ class RefactoringTest {
 		assertFalse(manuallyRefactoredSubprogram.isEmpty());
 		refactoring = Refactorings.createRWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 		autoRefactoredSubprogram = refactoring.refactor();
-		autoRefactoredSubprogram.forEach(System.out::println);
+		//autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 
 	}
@@ -134,7 +134,7 @@ class RefactoringTest {
 		
 		Refactoring refactoring = Refactorings.createRWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 		List<String> autoRefactoredSubprogram = refactoring.refactor();
-		autoRefactoredSubprogram.forEach(System.out::println);
+		//autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 	}
 }

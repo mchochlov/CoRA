@@ -16,17 +16,17 @@
 
       
       
-      CHARACTER(256), intent(in) :: ANALYSIS_DIR
+      CHARACTER(256) :: ANALYSIS_DIR
       logical, intent(inout) :: FATIGUE_ANALYSIS
       integer, intent(inout) :: IDEPLOY_FLAG
-      INTEGER, intent(in) :: IIN
-      integer, intent(in) :: ILOG
-      INTEGER, intent(in) :: IOUT
-      integer, intent(inout) :: PARA_ANALYSIS_NO
+      INTEGER :: IIN
+      integer :: ILOG
+      INTEGER :: IOUT
+      integer :: PARA_ANALYSIS_NO
       integer, intent(out) :: PARA_REC_NO
-      CHARACTER(256), intent(in) :: STUMP
-      integer, intent(in) :: axial_capacity_analysis_flag
-      integer, intent(inout) :: iscrn
+      CHARACTER(256) :: STUMP
+      integer :: axial_capacity_analysis_flag
+      integer :: iscrn
       
       !Local variables
       INTEGER :: IDUMMY(7)

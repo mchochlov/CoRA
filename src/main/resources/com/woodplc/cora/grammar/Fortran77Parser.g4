@@ -75,8 +75,11 @@ otherSpecificationStatement
    ;
 
 executableStatement
-   : (gotoStatement | ifStatement | assignmentStatement | doStatement | selectStatement | continueStatement | stopStatement | pauseStatement | readStatement | writeStatement | printStatement | rewindStatement | backspaceStatement | openStatement | closeStatement | endfileStatement | inquireStatement | callStatement | returnStatement | formatStatement | exitStatement | bindingStatement | flushStatement |
-   cycleStatement | allocateStatement | deallocateStatement | allocatedStatement | doWhileStatement | macroExecStatement)
+   : (gotoStatement | ifStatement | assignmentStatement | doStatement | selectStatement | continueStatement | stopStatement | 
+   pauseStatement | readStatement | writeStatement | printStatement | rewindStatement | backspaceStatement | openStatement | 
+   closeStatement | endfileStatement | inquireStatement | callStatement | returnStatement | formatStatement | exitStatement | 
+   bindingStatement | flushStatement | cycleStatement | allocateStatement | deallocateStatement | allocatedStatement | 
+   doWhileStatement | macroExecStatement)
    ;
 
 programStatement : PROGRAM NAME EOL
@@ -849,7 +852,7 @@ returnStatement
 expression1 
 	: intrinsicFunction
 	| identifier LPAREN exprList1 RPAREN expression1
-	| identifier LPAREN exprList1? RPAREN
+	| arrayOrFunctionExpression				
 	| expression1 (EQ | NE | GT | GE | LT | LE | LOR | LAND | DEFINED_OPERATOR) expression1
 	| (LNOT | DEFINED_OPERATOR) expression1
 	| expression1 POWER expression1
@@ -872,6 +875,8 @@ expression1
 	| expression1 PERCENT expression1
 	| PERCENT expression1
 	;
+	
+arrayOrFunctionExpression : identifier LPAREN exprList1? RPAREN;
 
 intrinsicFunction : allocatedStatement
 	| allocateStatement
@@ -1015,10 +1020,6 @@ logicalConstExpr
    : expression
    ;
 
-arrayElementName
-   : NAME LPAREN integerExpr (COMMA integerExpr)* RPAREN
-   ;
-
 subscripts
    : LPAREN (expression (COMMA expression)*)? RPAREN
    ;
@@ -1035,20 +1036,7 @@ substringApp
    : LPAREN (ncExpr)? COLON (ncExpr)? RPAREN
    ;
 
-arrayName : NAME
-   ;
 
-subroutineName : NAME
-   ;
-
-functionName : NAME
-   ;
-
-constant
-   : ((PLUS | MINUS))? unsignedArithmeticConstant
-   | (SCON | HOLLERITH)
-   | logicalConstant
-   ;
 
 unsignedArithmeticConstant
    : (ICON | RCON)

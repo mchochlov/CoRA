@@ -13,12 +13,12 @@
       !
       ! COMMON VARIABLES
       !
-      integer, intent(in) :: ndeg
+      integer :: ndeg
       integer, intent(in) :: nnode
-      REAL(8), DIMENSION(N1), intent(inout) :: DISP
+      REAL(8), DIMENSION(N1) :: DISP
       REAL(8), DIMENSION(N1) :: DISPT
-      REAL(8), DIMENSION(40), intent(in) :: DUMP
-      REAL(8), DIMENSION(NDEG, NDEG), intent(in) :: TDICOS
+      REAL(8), DIMENSION(40) :: DUMP
+      REAL(8), DIMENSION(NDEG, NDEG) :: TDICOS
       
       INTENT (INOUT) DISPT
       !Local variables
