@@ -13,7 +13,6 @@ import com.woodplc.cora.gui.model.CallDependencyView;
 import com.woodplc.cora.gui.model.RefactoringCaseView;
 
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 

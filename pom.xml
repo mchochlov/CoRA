@@ -80,6 +80,7 @@
         		</executions>
         		<configuration>
         			<sourceDirectory>src/main/resources</sourceDirectory>
+        			<libDirectory>src/main/resources/com/woodplc/cora/grammar</libDirectory>
         		</configuration>
         	</plugin>
         	<plugin>

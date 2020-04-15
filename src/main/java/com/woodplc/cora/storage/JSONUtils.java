@@ -1,26 +1,39 @@
 package com.woodplc.cora.storage;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Table;
+import com.google.common.graph.EndpointPair;
+import com.google.common.graph.GraphBuilder;
+import com.google.common.graph.MutableGraph;
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.google.gson.stream.JsonWriter;
+import com.google.gson.InstanceCreator;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import com.woodplc.cora.data.ApplicationState;
-import com.woodplc.cora.data.CallEdge;
 import com.woodplc.cora.data.FeatureView;
-import com.woodplc.cora.data.Graphs;
+import com.woodplc.cora.data.GuavaBasedSDGraph;
+import com.woodplc.cora.data.ModuleVariable;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
 
@@ -29,35 +42,164 @@ public final class JSONUtils {
 	private static final Path STATE_JSON_FILENAME = Paths.get("last_state.json");
 	private static final String SDGRAPH_JSON_FILENAME = "sdgraph.json";
 	private static final Gson SDGRAPH_TO_GSON = new GsonBuilder()
-			.registerTypeHierarchyAdapter(SDGraph.class, new GraphAdapter())
+			.registerTypeAdapter(SetMultimap.class, new MultiMapAdapter<String,String>())
+			.registerTypeAdapter(Table.class, new TableAdapter<String, String, ModuleVariable>())
+			.registerTypeAdapter(MutableGraph.class, new GraphAdapter<String>())
+			.registerTypeHierarchyAdapter(SubProgram.class, new SubProgramAdapter())
+			.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
+			.registerTypeAdapter(EndpointPair.class, new InstanceCreator<EndpointPair<String>>() {
+				public EndpointPair<String> createInstance(Type type) {
+				     return EndpointPair.ordered("", "");
+				}
+			})
 			.create();
 	private static final Gson STATE_TO_GSON = new GsonBuilder()
 			.serializeNulls()
 			.create();
 	private static final Gson FEATURE_TO_GSON = new GsonBuilder()
 			.serializeNulls()
-			//.registerTypeHierarchyAdapter(Path.class, new PathAdapter())
 			.registerTypeHierarchyAdapter(SubProgram.class, new SubProgramAdapter())
 			.setPrettyPrinting()
 			.create();
 
-	private enum JsonFieldNames {
-		TYPE("type"),
-		MODULE("module"),
-		SUBNAME("subname"),
-		STARTLINE("start"),
-		ENDLINE("end"),
-		PATH("path"),
-		SOURCE("u"),
-		TARGET("v"),
-		SUBPROGRAMS("subprograms"),
-		EDGES("edges"),
-		VARIABLES("variables");
+	private static final class SubProgramAdapter implements JsonDeserializer<SubProgram>, JsonSerializer<SubProgram> {
+
+		@Override
+		public JsonElement serialize(SubProgram src, Type typeOfSrc, JsonSerializationContext context) {
 		
-		private final String fieldName;
+			JsonObject jo = new JsonObject();
+			jo.addProperty("type", src.getClass().getSimpleName().toLowerCase());
+			jo.addProperty("module", src.module());
+			jo.addProperty("subname", src.name());
+			jo.addProperty("startLine", src.startLine());
+			jo.addProperty("endLine", src.endLine());
+			jo.addProperty("path", src.path().toString());
+			return jo;
+		}
+
+		@Override
+		public SubProgram deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+				throws JsonParseException {
+			JsonObject jo = json.getAsJsonObject();
+			return SubProgram.ofType(jo.get("type").getAsString(), jo.get("module").getAsString(), 
+					jo.get("subname").getAsString(), jo.get("startLine").getAsInt(), 
+					jo.get("endLine").getAsInt(), Paths.get(jo.get("path").getAsString()));
+		}
 		
-		private JsonFieldNames(String fieldName) {this.fieldName = fieldName;}
 	}
+	
+	private static final class PathAdapter implements JsonDeserializer<Path>, JsonSerializer<Path> {
+		
+	    @Override
+	    public Path deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+	        return Paths.get(jsonElement.getAsString());
+	    }
+
+	    @Override
+	    public JsonElement serialize(Path path, Type type, JsonSerializationContext jsonSerializationContext) {
+	        return new JsonPrimitive(path.toString());
+	    }
+	}
+	
+	private static final class MultiMapAdapter<K,V> implements JsonSerializer<SetMultimap<K,V>>, JsonDeserializer<SetMultimap<K,V>> {
+        private static final Type asMapReturnType;
+        static {
+            try {
+                asMapReturnType = SetMultimap.class.getDeclaredMethod("asMap").getGenericReturnType();
+            } catch (NoSuchMethodException e) {
+                throw new AssertionError(e);
+            }
+        }
+
+        @Override
+        public JsonElement serialize(SetMultimap<K, V> src, Type typeOfSrc, JsonSerializationContext context) {
+            return context.serialize(src.asMap(), asMapType(typeOfSrc));
+        }
+        @Override
+        public SetMultimap<K, V> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                throws JsonParseException {
+            Map<K, Collection<V>> asMap = context.deserialize(json, asMapType(typeOfT));
+            SetMultimap<K, V> multimap = SetMultimapBuilder
+        			.hashKeys()
+        			.hashSetValues()
+        			.build();
+            for (Map.Entry<K, Collection<V>> entry : asMap.entrySet()) {
+                multimap.putAll(entry.getKey(), entry.getValue());
+            }
+            return multimap;
+        }
+
+        private static Type asMapType(Type multimapType) {
+            return TypeToken.of(multimapType).resolveType(asMapReturnType).getType();
+        }
+    }
+	
+    private static final class GraphAdapter<K> implements JsonSerializer<MutableGraph<K>>, JsonDeserializer<MutableGraph<K>> {
+        private static final Type asMapReturnType;
+        static {
+            try {
+                asMapReturnType = MutableGraph.class.getMethod("edges").getGenericReturnType();
+            } catch (NoSuchMethodException e) {
+                throw new AssertionError(e);
+            }
+        }
+
+        @Override
+        public JsonElement serialize(MutableGraph<K> src, Type typeOfSrc, JsonSerializationContext context) {
+            return context.serialize(src.edges(), asMapType(typeOfSrc));
+        }
+        
+        @Override
+        public MutableGraph<K> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                throws JsonParseException {
+            Set<EndpointPair<K>> edges = context.deserialize(json, asMapType(typeOfT));
+            MutableGraph<K> graph = GraphBuilder
+        			.directed()
+        			.allowsSelfLoops(true)
+        			.build();
+            for (EndpointPair<K> edge : edges) {
+                graph.putEdge(edge.source(), edge.target());
+            }
+            return graph;
+        }
+
+        private static Type asMapType(Type multimapType) {
+            return TypeToken.of(multimapType).resolveType(asMapReturnType).getType();
+        }
+    }
+    
+    private static final class TableAdapter<R,C,V> implements JsonSerializer<Table<R,C,V>>, JsonDeserializer<Table<R,C,V>> {
+        private static final Type asMapReturnType;
+        static {
+            try {
+                asMapReturnType = Table.class.getDeclaredMethod("rowMap").getGenericReturnType();
+            } catch (NoSuchMethodException e) {
+                throw new AssertionError(e);
+            }
+        }
+
+        @Override
+        public JsonElement serialize(Table<R,C,V> src, Type typeOfSrc, JsonSerializationContext context) {
+            return context.serialize(src.rowMap(), asMapType(typeOfSrc));
+        }
+        
+        @Override
+        public Table<R,C,V> deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+                throws JsonParseException {
+            Map<R, Map<C,V>> asMap = context.deserialize(json, asMapType(typeOfT));
+            Table<R,C,V> table = HashBasedTable.create();
+            for (Map.Entry<R, Map<C,V>> entry : asMap.entrySet()) {
+            	for (Map.Entry<C, V> entry2 : entry.getValue().entrySet()) {
+            		table.put(entry.getKey(), entry2.getKey(), entry2.getValue());
+            	}
+            }
+            return table;
+        }
+
+        private static Type asMapType(Type multimapType) {
+            return TypeToken.of(multimapType).resolveType(asMapReturnType).getType();
+        }
+    }
 	
 	private JSONUtils() {}
 
@@ -78,7 +220,9 @@ public final class JSONUtils {
 		Path graphFilePath = Paths.get(entryPath.toString(), SDGRAPH_JSON_FILENAME);
 		
 		if (!Files.exists(graphFilePath)) throw new IllegalArgumentException();
-		return SDGRAPH_TO_GSON.fromJson(Files.newBufferedReader(graphFilePath), SDGraph.class);
+		SDGraph graph = SDGRAPH_TO_GSON.fromJson(Files.newBufferedReader(graphFilePath), GuavaBasedSDGraph.class);
+		graph.addGraphNodes(graph.subprograms());
+		return graph;
 	}
 
 	public static void graphToJson(Path entryPath, SDGraph graph) throws IOException {
@@ -91,196 +235,6 @@ public final class JSONUtils {
 		String jsonString = SDGRAPH_TO_GSON.toJson(graph);
 
 		Files.write(graphFilePath, jsonString.getBytes());
-	}
-
-	private static class GraphAdapter extends TypeAdapter<SDGraph> {
-
-		@Override
-		public SDGraph read(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			
-			reader.beginObject();
-			Set<SubProgram> subprograms = readSubprograms(reader);
-			Set<CallEdge> edges = readEdges(reader);
-			Map<String, Collection<String>> variables = writeVariables(reader);
-			reader.endObject();
-			
-			return Graphs.newInstanceFromValues(subprograms, edges, variables);
-		}
-
-		private Set<SubProgram> readSubprograms(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			
-			Set<SubProgram> subprograms = new HashSet<>();
-			reader.nextName();
-			reader.beginArray();
-			while(reader.hasNext()) {
-				reader.beginObject();
-				String type = null;
-				String module = null;
-				String subname = null;
-				int startLine = 0, endLine = 0;
-				Path path = null;
-			    while (reader.hasNext()) {
-			    	String name = reader.nextName();
-			    	if (name.equals(JsonFieldNames.TYPE.fieldName)) {
-			    		type = reader.nextString();
-			    	} else if (name.equals(JsonFieldNames.MODULE.fieldName)) {
-			    		module = reader.nextString();
-			    	} else if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
-			    		subname = reader.nextString();
-			    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
-			    		startLine = reader.nextInt();
-			    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
-			    		endLine = reader.nextInt();
-			    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
-			    		path = Paths.get(reader.nextString());
-			    	} else {
-			    		reader.skipValue();
-			    	}
-			    }
-			    reader.endObject();
-			    subprograms.add(SubProgram.ofType(type, module, subname, startLine, endLine, path));				 
-			}
-			reader.endArray();
-			
-			return subprograms;
-		}
-
-		private Set<CallEdge> readEdges(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			
-			Set<CallEdge> edges = new HashSet<>();
-			reader.nextName();
-			reader.beginArray();
-			while(reader.hasNext()) {
-				reader.beginObject();
-				String source = null, target = null;
-			    while (reader.hasNext()) {
-			    	String name = reader.nextName();
-			    	if (name.equals(JsonFieldNames.SOURCE.fieldName)) {
-			    		source = reader.nextString();
-			    	} else if (name.equals(JsonFieldNames.TARGET.fieldName)) {
-			    		target = reader.nextString();
-			    	} else {
-			    		reader.skipValue();
-			    	}
-			    }
-			    reader.endObject();
-			    edges.add(new CallEdge(source, target));
-			}
-			reader.endArray();
-			return edges;
-		}
-
-		private Map<String, Collection<String>> writeVariables(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			
-			Map<String, Collection<String>> variables = new HashMap<>();
-			reader.nextName();
-			reader.beginArray();
-			while(reader.hasNext()) {
-				reader.beginObject();
-				String key = reader.nextName();
-				reader.beginArray();
-				Collection<String> collection = new HashSet<>();
-				while(reader.hasNext()) {
-				    collection.add(reader.nextString());
-				}
-				reader.endArray();
-				reader.endObject();
-				variables.put(key, collection);
-			}
-			reader.endArray();
-			
-			return variables;
-		}
-
-		@Override
-		public void write(JsonWriter writer, SDGraph graph) throws IOException {
-			if (graph == null) {
-				writer.nullValue();
-				return;
-			}
-
-			writer.beginObject();
-			writeSubprograms(writer, graph.subprograms());
-			writeEdges(writer, graph.edges());
-			writeVariables(writer, graph.variables());
-			writer.endObject();
-		}
-
-		private void writeSubprograms(JsonWriter writer, Set<SubProgram> subprograms)
-				throws IOException {
-			if (subprograms == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.name(JsonFieldNames.SUBPROGRAMS.fieldName);
-			writer.beginArray();
-			
-			for (SubProgram subprogram : subprograms) {
-				writer.beginObject();
-				writer.name(JsonFieldNames.TYPE.fieldName).value(subprogram.getClass().getSimpleName().toLowerCase());
-				writer.name(JsonFieldNames.MODULE.fieldName).value(subprogram.module());
-				writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
-				writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
-				writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
-				writer.name(JsonFieldNames.PATH.fieldName).value(subprogram.path().toString());
-				writer.endObject();
-			}
-			
-			writer.endArray();
-		}
-
-		private void writeEdges(JsonWriter writer, Set<CallEdge> edges) throws IOException {
-			if (edges == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.name(JsonFieldNames.EDGES.fieldName);
-			writer.beginArray();
-			for (CallEdge edge : edges) {
-				writer.beginObject();
-				writer.name(JsonFieldNames.SOURCE.fieldName).value(edge.source());
-				writer.name(JsonFieldNames.TARGET.fieldName).value(edge.target());
-				writer.endObject();
-			}
-			writer.endArray();
-		}
-
-		private void writeVariables(JsonWriter writer, Map<String, Collection<String>> variables) throws IOException {
-			if (variables == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.name(JsonFieldNames.VARIABLES.fieldName);
-			writer.beginArray();
-			for (Map.Entry<String, Collection<String>> entry : variables.entrySet()) {
-				writer.beginObject();
-				writer.name(entry.getKey());
-				writer.beginArray();
-				for (String subprogram : entry.getValue()) {
-					writer.value(subprogram);
-				}
-				writer.endArray();
-				writer.endObject();
-			}
-			writer.endArray();
-		}
-
 	}
 
 	public static boolean stateFileExists() {
@@ -303,80 +257,5 @@ public final class JSONUtils {
 		
 		return FEATURE_TO_GSON.fromJson(Files.newBufferedReader(exportPath), FeatureView.class);
 	}
-	
-	private static class PathAdapter extends TypeAdapter<Path> {
 
-		@Override
-		public void write(JsonWriter writer, Path path) throws IOException {
-			if (path == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.value(path.toString());
-		}
-
-		@Override
-		public Path read(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			return Paths.get(reader.nextString());
-		}
-		
-	}
-	
-	private static class SubProgramAdapter extends TypeAdapter<SubProgram> {
-
-		@Override
-		public void write(JsonWriter writer, SubProgram subprogram) throws IOException {
-			if (subprogram == null) {
-				writer.nullValue();
-				return;
-			}
-			writer.beginObject();
-			writer.name(JsonFieldNames.TYPE.fieldName).value(subprogram.getClass().getSimpleName().toLowerCase());
-			writer.name(JsonFieldNames.MODULE.fieldName).value(subprogram.module());
-			writer.name(JsonFieldNames.SUBNAME.fieldName).value(subprogram.name());
-			writer.name(JsonFieldNames.STARTLINE.fieldName).value(subprogram.startLine());
-			writer.name(JsonFieldNames.ENDLINE.fieldName).value(subprogram.endLine());
-			writer.name(JsonFieldNames.PATH.fieldName).value(subprogram.path().toString());
-			writer.endObject();
-		}
-
-		@Override
-		public SubProgram read(JsonReader reader) throws IOException {
-			if (reader.peek() == JsonToken.NULL) {
-		        reader.nextNull();
-		        return null;
-		    }
-			reader.beginObject();
-			String type = null;
-			String module = null;
-			String subname = null;
-			int startLine = 0, endLine = 0;
-			Path path = null;
-		    while (reader.hasNext()) {
-		    	String name = reader.nextName();
-		    	if (name.equals(JsonFieldNames.TYPE.fieldName)) {
-		    		type = reader.nextString();
-		    	} else if (name.equals(JsonFieldNames.MODULE.fieldName)) {
-		    		module = reader.nextString();
-		    	} else if (name.equals(JsonFieldNames.SUBNAME.fieldName)) {
-		    		subname = reader.nextString();
-		    	} else if (name.equals(JsonFieldNames.STARTLINE.fieldName)) {
-		    		startLine = reader.nextInt();
-		    	} else if (name.equals(JsonFieldNames.ENDLINE.fieldName)) {
-		    		endLine = reader.nextInt();
-		    	} else if (name.equals(JsonFieldNames.PATH.fieldName)) {
-		    		path = Paths.get(reader.nextString());
-		    	} else {
-		    		reader.skipValue();
-		    	}
-		    }
-		    reader.endObject();
-		    return SubProgram.ofType(type, module, subname, startLine, endLine, path);	
-		}
-		
-	}
 }

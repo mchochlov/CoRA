@@ -35,11 +35,11 @@ class GraphTest {
 	private static final String VARIABLE_CALLEES_FILE = "variable_callees.txt";
 	private static final int NUM_VARIABLE_MEMBERS = 2;
 	private static final Set<String> correctUnreferencedSubprograms = new HashSet<>(
-			Arrays.asList("lin_flex_joint_prop", "xloc", "initialiseids", "epslon8", "mxout", 
-					"initialiseids_sub", "set", "exampleset_sub", "exampleget_sub", "exampleprint_sub", 
+			Arrays.asList("LIN_FLEX_JOINT_PROP", "XLOC", "InitialiseIds", "epslon8", "MXOUT", 
+					"InitialiseIds_sub", "set", "ExampleSet_sub", "ExampleGet_sub", "ExamplePrint_sub", 
 					"iprint", "read_wave_general_maxes_01", "read_wave_general_data_01", "clean", 
 					"set_sub", "print_sub", "read_wave_general_maxes_01_sub", "read_wave_general_data_01_sub", 
-					"read_line", "find_reals_in_line", "freeh", "gtprd", "wavln", "wavgen")
+					"read_line", "find_reals_in_line", "freeh", "GTPRD", "WAVLN", "wavgen")
 			);
 	
 	@Test
@@ -53,7 +53,7 @@ class GraphTest {
 		assertNotNull(graph);
 		
 		for (String entry : fileEntries) {
-			String[] entryMembers = entry.toLowerCase().split(RegEx.COMMA.regex(), NUM_SUBPROGRAM_MEMBERS);
+			String[] entryMembers = entry.split(RegEx.COMMA.regex(), NUM_SUBPROGRAM_MEMBERS);
 			assertEquals(NUM_SUBPROGRAM_MEMBERS, entryMembers.length);
 			String subName = entryMembers[0];
 			assertTrue(!subName.isEmpty());
@@ -82,7 +82,7 @@ class GraphTest {
 		assertNotNull(graph);
 		
 		for (String entry : fileEntries) {
-			String[] entryMembers = entry.toLowerCase().split(RegEx.COMMA.regex(), NUM_VARIABLE_MEMBERS);
+			String[] entryMembers = entry.split(RegEx.COMMA.regex(), NUM_VARIABLE_MEMBERS);
 			assertEquals(NUM_VARIABLE_MEMBERS, entryMembers.length);
 			String varName = entryMembers[0];
 			assertTrue(varName.length() > 0);

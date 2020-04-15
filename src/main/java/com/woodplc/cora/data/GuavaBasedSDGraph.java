@@ -13,36 +13,44 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.Traverser;
 
-final class GuavaBasedSDGraph implements SDGraph {
+public final class GuavaBasedSDGraph implements SDGraph {
 		
-	private final Set<SubProgram> subprograms = new HashSet<>();
-
-	private final MutableGraph<String> subprogramCallGraph = GraphBuilder
-			.directed()
-			.allowsSelfLoops(true)
-			.build();
-	private final SetMultimap<String, String> variableCallees = SetMultimapBuilder
-			.hashKeys()
-			.hashSetValues()
-			.build();
+	private final Table<String, String, ModuleVariable> moduleVariableMap;
+	private final Set<SubProgram> subprograms;
+	private final MutableGraph<String> subprogramCallGraph;
+	private final SetMultimap<String, String> variableCallees;
 	
-	private ImmutableSet<String> unreferencedSubprograms = null;
-	private ImmutableSet<String> externalSubprograms = null;
+	private transient ImmutableSet<String> unreferencedSubprograms = null;
+	private transient ImmutableSet<String> externalSubprograms =  null;
 	
-	GuavaBasedSDGraph() {}
+	GuavaBasedSDGraph() {
+		moduleVariableMap = HashBasedTable.create();
+		subprograms = new HashSet<>();
+		subprogramCallGraph = GraphBuilder
+				.directed()
+				.allowsSelfLoops(true)
+				.build();
+		variableCallees = SetMultimapBuilder
+				.hashKeys()
+				.hashSetValues()
+				.build();
+	}
 	
 	GuavaBasedSDGraph(Set<SubProgram> subprograms, 
 			Set<CallEdge> edges,
 			Map<String, Collection<String>> variables) {
+		this();
 		Objects.requireNonNull(subprograms);
 		Objects.requireNonNull(edges);
 		Objects.requireNonNull(variables);
@@ -141,6 +149,7 @@ final class GuavaBasedSDGraph implements SDGraph {
 			this.subprogramCallGraph.putEdge(x.source(), x.target());
 		});
 		this.subprograms.addAll(g.subprograms);
+		this.moduleVariableMap.putAll(g.moduleVariableMap);
 		this.variableCallees.putAll(g.variableCallees);
 		g = null;
 	}
@@ -187,13 +196,14 @@ final class GuavaBasedSDGraph implements SDGraph {
 		GuavaBasedSDGraph g = (GuavaBasedSDGraph) o;
 		
 		return this.subprograms.equals(g.subprograms)
+				&& this.moduleVariableMap.equals(g.moduleVariableMap)
 				&& this.subprogramCallGraph.equals(g.subprogramCallGraph)
 				&& this.variableCallees.equals(g.variableCallees);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.subprograms, this.subprogramCallGraph, this.variableCallees);
+		return Objects.hash(this.subprograms, this.moduleVariableMap, this.subprogramCallGraph, this.variableCallees);
 	}
 
 	@Override
@@ -256,6 +266,43 @@ final class GuavaBasedSDGraph implements SDGraph {
 					System.out.println("\n");
 				}
 			}
+		}
+		
+	}
+
+	@Override
+	public Set<String> modules() {
+		return moduleVariableMap.rowKeySet();
+	}
+
+	@Override
+	public void addModuleVariable(String moduleName, String variableName, ModuleVariable moduleVariable) {
+		Objects.requireNonNull(moduleName);
+		Objects.requireNonNull(variableName);
+		
+		if (moduleName.isEmpty() || moduleVariableMap.put(moduleName, variableName, moduleVariable) != null) {
+			throw new IllegalStateException(moduleName + " " + variableName);
+		}
+	}
+
+	@Override
+	public ModuleVariable getModuleVariable(String moduleName, String variableName) {
+		Objects.requireNonNull(moduleName);
+		Objects.requireNonNull(variableName);
+		
+		return moduleVariableMap.get(moduleName, variableName);
+	}
+
+	@Override
+	public Set<String> getAllModuleVariables(String moduleName) {
+		return moduleVariableMap.row(moduleName).keySet();
+	}
+
+	@Override
+	public void addGraphNodes(Set<SubProgram> subprograms) {
+		Objects.requireNonNull(subprograms);
+		for (SubProgram subProgram : subprograms) {
+			subprogramCallGraph.addNode(subProgram.name());
 		}
 		
 	}

@@ -1,6 +1,5 @@
 package com.woodplc.cora.gui.controllers;
 
-import java.nio.file.Path;
 import java.util.Objects;
 import java.util.stream.Collectors;
 

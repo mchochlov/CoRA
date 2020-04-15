@@ -28,6 +28,9 @@ import javafx.collections.ObservableList;
 public final class TestUtils {
 
 	public static enum SoftwareSystem {
+		TEST_MOD_FL(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\fl")),
+		TEST_MOD_DR(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\dr")),
+		TEST_MOD_PL(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\pl")),
 		TEST(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\all")),
 		FLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\FlexcomAnalysis\\Flex3")),
 		DPRFLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\DeepRiserAnalysis\\Dprflex3")),
