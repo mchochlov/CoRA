@@ -3,9 +3,9 @@
 !
 !
 !
-      SUBROUTINE OPEN_PARAMETER_LOG_FILE(PARA_ANALYSIS_NO, ILOG, PARA_REC_NO, &
-	& FATIGUE_ANALYSIS, axial_capacity_analysis_flag, IDEPLOY_FLAG, iscrn, IIN, IOUT, &
-	& ANALYSIS_DIR, STUMP)
+      SUBROUTINE OPEN_PARAMETER_LOG_FILE(PARA_ANALYSIS_NO, ILOG, PARA_REC_NO,  &
+	& FATIGUE_ANALYSIS, axial_capacity_analysis_flag, IDEPLOY_FLAG, iscrn, IIN,  &
+	& IOUT, ANALYSIS_DIR, STUMP)
       
       
       

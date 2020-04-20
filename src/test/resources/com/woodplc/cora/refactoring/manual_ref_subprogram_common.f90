@@ -6,7 +6,7 @@
 ! ****************************************************************************************  
 
 
-subroutine delete_sb_moment_loads(idsbn,node1,node2,disp1, nonp, n1, irigsf, &
+subroutine delete_sb_moment_loads(idsbn, node1, node2, disp1, nonp, n1, irigsf,  &
 	& nmsbn, ielasf)
  
  implicit none

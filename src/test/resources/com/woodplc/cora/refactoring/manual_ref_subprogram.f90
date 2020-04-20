@@ -9,9 +9,9 @@
 !! Subroutine to check if the pip contact flag has been set for any connection 
 !! whose end node 
 !<
-subroutine check_pip_contact(int_node,contact, npipnod, nkpipnod, mxpipnod, &
-	& pip_nodes, pip_ignore, n0kpipnod, pip_contact, numel, pip_inner_elem, size_epi, &
-	& nonp, epi)
+subroutine check_pip_contact(int_node, contact, npipnod, nkpipnod, mxpipnod,  &
+	& pip_nodes, pip_ignore, n0kpipnod, pip_contact, numel, pip_inner_elem,  &
+	& size_epi, nonp, epi)
   ! This should not be refactored
   use FiniteElementSolverAPIs, only : finite_element_solver
   ! Test error is produced for unknown module

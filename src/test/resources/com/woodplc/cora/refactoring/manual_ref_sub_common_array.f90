@@ -2,7 +2,7 @@
 !
 !
 !
-      SUBROUTINE TRANSF(DISPT,DISP,TDICOS, nnode, ndeg, n1, DUMP)
+      SUBROUTINE TRANSF(DISPT, DISP, TDICOS, nnode, ndeg, n1, DUMP)
 
       
 
@@ -13,6 +13,7 @@
       !
       ! COMMON VARIABLES
       !
+      integer, intent(in) :: n1
       integer :: ndeg
       integer, intent(in) :: nnode
       REAL(8), DIMENSION(N1) :: DISP
