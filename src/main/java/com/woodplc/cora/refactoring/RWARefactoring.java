@@ -29,6 +29,7 @@ import com.google.common.base.Strings;
 import com.google.common.io.MoreFiles;
 import com.woodplc.cora.data.DefAndUseMapper;
 import com.woodplc.cora.data.ModuleVariable;
+import com.woodplc.cora.data.OrderedCaseInsensitiveSet;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.grammar.Fortran77Lexer;
 import com.woodplc.cora.grammar.Fortran77Parser;
@@ -58,13 +59,13 @@ import com.woodplc.cora.grammar.Fortran77Parser.TypeStatementNameContext;
 import com.woodplc.cora.grammar.Fortran77Parser.UseStatementContext;
 import com.woodplc.cora.grammar.Fortran77ParserBaseListener;
 
-class RWARefactoring implements Refactoring {
+class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring {
 	
-	private static final String NEW_LINE = "\n";
 	private final Path path;
 	private final Stream<String> originalSubprogram;
 	private final SDGraph systemGraph;
 	private final SDGraph cafGraph;
+	private RWARewriter rwaRewriter;
 
 	public RWARefactoring(Path path, Stream<String> originalSubprogram, SDGraph systemGraph, SDGraph cafGraph) {
 		this.path = path;
@@ -76,38 +77,49 @@ class RWARefactoring implements Refactoring {
 	@Override
 	public List<String> refactor() {
 		Fortran77Lexer lexer = new Fortran77Lexer(CharStreams.fromString(originalSubprogram.collect(Collectors.joining(NEW_LINE))));
+		FortranFormatter fm = null;
 		if (MoreFiles.getFileExtension(path).toLowerCase().equals("for")) {
 			lexer.fixedForm = true;
+			fm = FortranFormatter.ofFixedForm();
 		} else {
 			lexer.fixedForm = false;
+			fm = FortranFormatter.ofFreeForm();
 		}
 		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
 		TokenStreamRewriter rewriter = new TokenStreamRewriter(commonTokenStream);
 		Fortran77Parser parser = new Fortran77Parser(commonTokenStream);
 		ParseTree tree = parser.program();
 		ParseTreeWalker ptw = new ParseTreeWalker();
-		ptw.walk(new RWARewriter(rewriter, systemGraph, cafGraph, lexer.fixedForm), tree);
+		rwaRewriter = new RWARewriter(rewriter, systemGraph, cafGraph, fm);
+		ptw.walk(rwaRewriter, tree);
 		return Arrays.asList(rewriter.getText().split(NEW_LINE));			
 	}
 
+	
+	public String subprogramName() {
+		return this.rwaRewriter.subName;
+	}
+	
 	private static class RWARewriter extends Fortran77ParserBaseListener{
 
 		private final TokenStreamRewriter rw;
 		private final SDGraph systemGraph;
 		private final SDGraph cafGraph;
-		private final boolean isFixedForm;
-		private final StringBuilder argumentList;
-		private Set<String> argumentSet;
+		private final FortranFormatter fm;
+		private final OrderedCaseInsensitiveSet<String> argumentSet;
+		private Token argumentListStartToken = null;
+		private Token argumentListStopToken = null;
+		
 		private final Set<ArgumentVariable> variables;
 		private final Set<String> commonItems;
 		private final Set<String> existingIntentArguments;
 		private final Set<String> callArguments;
-		private Token argumentLastToken;
+		private Token subNameToken;
 		private Token firstTypeToken = null;
 		private Token lastTypeToken = null;
 		private int typeOffset = 0;
 		private int useStatementOffset = 0;
-		private int currentArgumentListOffset = 0;
+		private int initialArgumentListOffset = 0;
 		private final List<String> parameterAllocationErrors;
 		private final List<ArgumentVariable> localVariables;
 		private final List<String> existingIntentStatements;
@@ -117,22 +129,19 @@ class RWARefactoring implements Refactoring {
 		private static final String MODULE_NOT_FOUND_COMMENT = "! Error: Module not found ";
 		private static final String MODULE_VAR_NOT_FOUND_COMMENT = "! Error: Module variable not found ";
 		private static final String PARAMETER_ALLOCATION_ERROR = "! Error resolved allocation parameter ";
-		private static final int ARGUMENT_OFFSET = 80;
 		
 		private final DefAndUseMapper defAndUseMapper = new DefAndUseMapper();
 		private ExecutableStatementContext currentExecutableStatement = null;
 		private boolean isLhsExpression = false;
 		
-		private String functionName = null;
-		private static final String fixedOffset = "     ";
+		private String subName = null;
 
-		public RWARewriter(TokenStreamRewriter rewriter, SDGraph systemGraph, SDGraph cafGraph, boolean isFixedForm) {
+		public RWARewriter(TokenStreamRewriter rewriter, SDGraph systemGraph, SDGraph cafGraph, FortranFormatter fm) {
 			this.rw = rewriter; 
 			this.systemGraph = systemGraph;
 			this.cafGraph = cafGraph;
-			this.isFixedForm = isFixedForm;
-			argumentList = new StringBuilder();
-			this.argumentSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			this.fm = fm;
+			this.argumentSet = new OrderedCaseInsensitiveSet<String>(String.CASE_INSENSITIVE_ORDER);
 			this.variables = new HashSet<>();
 			this.commonItems = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			this.existingIntentArguments = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -170,7 +179,7 @@ class RWARefactoring implements Refactoring {
 
 		@Override
 		public void enterSubroutineStatement(SubroutineStatementContext ctx) {
-			onEnterSubprogram(ctx.namelist(), ctx.LPAREN(), ctx.subName());
+			onEnterSubprogram(ctx.subName(), ctx.namelist(), ctx.LPAREN(), ctx.RPAREN(), ctx.subName());
 		}
 		
 		@Override
@@ -214,23 +223,22 @@ class RWARefactoring implements Refactoring {
 
 		@Override
 		public void enterFunctionStatement(FunctionStatementContext ctx) {
-			onEnterSubprogram(ctx.namelist(), ctx.LPAREN(), ctx.subName());
-			functionName = ctx.subName().getText();
+			onEnterSubprogram(ctx.subName(), ctx.namelist(), ctx.LPAREN(), ctx.RPAREN(), ctx.subName());
 		}
 
-		private void onEnterSubprogram(NamelistContext nlc, TerminalNode lparen, SubNameContext snc) {
-			if (nlc == null || nlc.isEmpty()) {
-				if (lparen == null) {
-					argumentLastToken = snc.getStop();
-					argumentList.append('(');
-				} else {
-					argumentLastToken = lparen.getSymbol();
-				}
-			} else {
-				argumentLastToken = nlc.getStop();			
-				argumentSet = nlc.identifier().stream().map(IdentifierContext::getText).collect(Collectors.toSet());
+		private void onEnterSubprogram(SubNameContext subNameContext, NamelistContext nlc, TerminalNode lparen, TerminalNode rparen, SubNameContext snc) {
+			subName = subNameContext.getText();
+			subNameToken = snc.getStart();
+			if (lparen != null && rparen != null) {
+				argumentListStartToken = lparen.getSymbol();
+				argumentListStopToken = rparen.getSymbol();
 			}
-			currentArgumentListOffset = argumentLastToken.getCharPositionInLine() + argumentLastToken.getText().length();
+			if (nlc != null) {
+				for (IdentifierContext ic : nlc.identifier()) {
+					argumentSet.add(ic.getText());
+				}
+			}
+			initialArgumentListOffset = subNameToken.getCharPositionInLine() + subNameToken.getText().length();
 		}
 		
 		@Override
@@ -253,30 +261,37 @@ class RWARefactoring implements Refactoring {
 				if (commonItems.contains(av.getName())) {
 					if (!defAndUseMapper.isGlobalVariableUnused(av.getName())) {
 						variables.add(av);						
-						appendArgumentAndAdjustOffset(av.getName());
+						argumentSet.add(av.getName());
 					}
 					iterator.remove();
 				}
 			}
 						
-			if (argumentList.charAt(0) == '(') {
-				argumentList.append(")");
-			}
-			rw.insertAfter(argumentLastToken, argumentList.toString());
 			String tab = Strings.repeat(" ", typeOffset);
+			fm.setTypeTab(tab);
 			
-			for (String error : parameterAllocationErrors) {
-				if (isFixedForm) {
-					output.append("C ").append(error).append("\n").append(fixedOffset);
-				} else {
-					output.append("! ").append(error).append("\n").append(tab);
-				}
-			}
+			output.append(fm.formatParameterAllocationErrors(parameterAllocationErrors));
+
 			
 			Map<Boolean, List<ArgumentVariable>> varMap = variables.stream()
 				.filter(x -> !defAndUseMapper.isGlobalVariableUnused(x.getName()))
 				.sorted(Comparator.comparing(ArgumentVariable::getName))
 				.collect(partitioningBy(ArgumentVariable::isScalar));
+			
+			//remove unused variables from argument list
+			for (ArgumentVariable av : variables) {
+				if (defAndUseMapper.isGlobalVariableUnused(av.getName())) {
+					argumentSet.remove(av.getName());
+				}
+			}
+			//format argument list
+			String argumentList = fm.formatArgumentList(argumentSet.nonNullValues(), initialArgumentListOffset);
+			if (argumentListStartToken != null) {
+				rw.replace(argumentListStartToken, argumentListStopToken, argumentList);
+			} else {
+				rw.insertAfter(subNameToken, argumentList);
+			}
+			
 			for (ArgumentVariable av : varMap.get(true)) {
 				appendOutput(av, output, tab);
 			}
@@ -286,19 +301,10 @@ class RWARefactoring implements Refactoring {
 			}
 			// Append existing intent
 			
-			for (String string : existingIntentStatements) {
-				if (isFixedForm) {
-					output.append("\n").append(fixedOffset + " ").append(string);
-				} else {
-					output.append("\n").append(tab).append(string);
-				}
-			}
+			output.append(fm.formatIntentStatements(existingIntentStatements));
+
+			output.append(fm.formatLocalVariableComment());
 			
-			if (isFixedForm) {
-				output.append("\n").append("C ").append("Local variables").append("\n").append(fixedOffset + " ");
-			} else {
-				output.append("\n").append(tab).append("!Local variables").append("\n").append(tab);
-			}
 			for (ArgumentVariable av : localVariables) {
 				if (defAndUseMapper.isLocalVariableUnused(av.getName())) {
 					for (Map.Entry<Integer, ParserRuleContext> entry : defAndUseMapper.getDefinitions(av.getName()).entrySet()) {
@@ -338,13 +344,13 @@ class RWARefactoring implements Refactoring {
 				} else {
 					throw new IllegalArgumentException();
 				}
-				if (argumentSet.contains(varName) || (functionName != null && functionName.equalsIgnoreCase(varName))) {
+				if (argumentSet.contains(varName) || (subName != null && subName.equalsIgnoreCase(varName))) {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
 						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
 						arrayNames.add(varName);
 						variables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));					
-						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
+						List<String> allocationParameters = Trees.findAllRuleNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.RULE_identifier)
 								.stream()
 								.map(x -> x.getText())
 								.collect(Collectors.toList());
@@ -352,6 +358,11 @@ class RWARefactoring implements Refactoring {
 					} else {
 						arrayNames.add(varName);
 						variables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
+						List<String> allocationParameters = Trees.findAllRuleNodes(ctx.dimensionStatement(0), Fortran77Parser.RULE_identifier)
+								.stream()
+								.map(x -> x.getText())
+								.collect(Collectors.toList());
+						generateAllocationParameters(allocationParameters, ctx);
 					}					
 				} else {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
@@ -359,7 +370,7 @@ class RWARefactoring implements Refactoring {
 					} else if (!oldStyleArrayDeclaration.isEmpty()) {
 						arrayNames.add(varName);
 						localVariables.add(ArgumentVariable.ofOldStyleArrayType(varName, oldStyleArrayDeclaration, declaration, ctx.intentAttribute()));
-						List<String> allocationParameters = Trees.findAllTokenNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.NAME)
+						List<String> allocationParameters = Trees.findAllRuleNodes(tsnc.arrayDeclarator().arrayDeclaratorExtents(), Fortran77Parser.RULE_identifier)
 								.stream()
 								.map(x -> x.getText())
 								.collect(Collectors.toList());
@@ -367,6 +378,11 @@ class RWARefactoring implements Refactoring {
 					} else {
 						arrayNames.add(varName);
 						localVariables.add(ArgumentVariable.ofArrayType(varName, declaration, ctx.intentAttribute()));
+						List<String> allocationParameters = Trees.findAllRuleNodes(ctx.dimensionStatement(0), Fortran77Parser.RULE_identifier)
+								.stream()
+								.map(x -> x.getText())
+								.collect(Collectors.toList());
+						generateAllocationParameters(allocationParameters, ctx);
 					}		
 				}
 			}
@@ -411,7 +427,7 @@ class RWARefactoring implements Refactoring {
 								arrayNames.add(variableName);
 								generateAllocationParameters(mv.getAllocationParameters(), ctx);
 							}
-							appendArgumentAndAdjustOffset(variableName);
+							argumentSet.add(variableName);
 						} else {
 							localErrors.append(MODULE_VAR_NOT_FOUND_COMMENT).append(moduleName)
 								.append(" :: ").append(variableName).append("\n").append(tab);
@@ -462,60 +478,32 @@ class RWARefactoring implements Refactoring {
 			rw.delete(ctx.getStart(), ctx.getStop());
 		}
 
-
-		private void appendArgumentAndAdjustOffset(String variableName) {
-			if (!argumentSet.contains(variableName)) {
-				if (currentArgumentListOffset + variableName.length() + 3 > ARGUMENT_OFFSET) {
-					if (argumentList.toString().equals("(") || (argumentList.length() == 0 && argumentLastToken.getType() == Fortran77Lexer.LPAREN)) {
-						if (isFixedForm) {
-							argumentList.append("\n").append(fixedOffset).append("& ").append(variableName);
-						} else {
-							argumentList.append(" &\n\t& ").append(variableName);
-						}
-						
-					} else {
-						if (isFixedForm) {
-							argumentList.append(",\n").append(fixedOffset).append("& ").append(variableName);
-						} else {
-							argumentList.append(", &\n\t& ").append(variableName);
-						}
-					}
-					currentArgumentListOffset = 6;
-				} else {
-					if (argumentList.toString().equals("(") || (argumentList.length() == 0 && argumentLastToken.getType() == Fortran77Lexer.LPAREN)) {
-						argumentList.append(variableName);
-					} else {
-						argumentList.append(", ").append(variableName);	
-					}
-					currentArgumentListOffset += variableName.length() + 2;
-				}	
-				argumentSet.add(variableName);
-			}
-		}
-
-
 		private void generateAllocationParameters(List<String> allocationParameters, ParserRuleContext ctx) {
 			for (String ap : allocationParameters) {
-				Map<String, ModuleVariable> mVar = systemGraph.getAllVariableModules(ap);
-				if (mVar.size() != 1) {
-					parameterAllocationErrors.add(PARAMETER_ALLOCATION_ERROR + ap + " " + mVar.keySet());
+				if (argumentSet.contains(ap)) {
+					defAndUseMapper.addUse(ap, ctx.getStart().getLine(), ctx);
 				} else {
-					mVar.forEach((k,v) -> {
-						if (v.isScalar()) {
-							variables.add(ArgumentVariable.fromModule(ap, v.getType(), v.getAllocation()));
-							defAndUseMapper.addUse(ap, ctx.getStart().getLine(), ctx);
-							appendArgumentAndAdjustOffset(ap);
-						} else {
-							generateAllocationParameters(v.getAllocationParameters(), ctx);
-						}
-					});
+					Map<String, ModuleVariable> mVar = systemGraph.getAllVariableModules(ap);
+					if (mVar.size() != 1) {
+						parameterAllocationErrors.add(PARAMETER_ALLOCATION_ERROR + ap + " " + mVar.keySet());
+					} else {
+						mVar.forEach((k,v) -> {
+							if (v.isScalar()) {
+								variables.add(ArgumentVariable.fromModule(ap, v.getType(), v.getAllocation()));
+								defAndUseMapper.addUse(ap, ctx.getStart().getLine(), ctx);
+								argumentSet.add(ap);
+							} else {
+								generateAllocationParameters(v.getAllocationParameters(), ctx);
+							}
+						});
+					}
 				}
 			}
 			
 		}
 
 		private boolean isVariableFunctionName(String varName) {
-			return functionName != null && functionName.equals(varName) ? true : false;
+			return subName != null && subName.equals(varName) ? true : false;
 		}
 
 		private StringBuilder appendOutput(ArgumentVariable av, StringBuilder output, String tab) {
@@ -562,8 +550,6 @@ class RWARefactoring implements Refactoring {
 			}
 		}
 	}
-	
-	
 	
 	private final static class ArgumentVariable {
 		private final String name;
@@ -686,4 +672,22 @@ class RWARefactoring implements Refactoring {
 
 		
 	}
+
+	public List<String> getArgumentListNonNull() {
+		return rwaRewriter.argumentSet.nonNullValues();
+	}
+
+	public boolean isArgListEmpty() {
+		return rwaRewriter.argumentSet.isEmpty();
+	}
+
+	public int getArgumentListSize() {
+		return rwaRewriter.argumentSet.size();
+	}
+
+	public String getArgument(int i) {
+		return rwaRewriter.argumentSet.get(i);
+	}
+
+	
 }

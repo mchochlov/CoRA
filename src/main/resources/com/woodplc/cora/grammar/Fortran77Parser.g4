@@ -287,8 +287,8 @@ arrayDeclaratorExtents
    ;
 
 arrayDeclaratorExtent
-   : iexprCode (COLON (iexprCode | STAR))?
-   | expression1
+   : expression1
+   | iexprCode (COLON (iexprCode | STAR))? 
    | STAR
    ;
 

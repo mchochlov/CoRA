@@ -17,4 +17,14 @@ public final class Refactorings {
 		return new RWARefactoring(originalPath, originalSubprogram, systemGraph, cafGraph);
 	}
 
+	public static Refactoring createCallerRefactoring(Path originalPath, Stream<String> originalSubprogram,
+			Refactoring refactoring) {
+		Objects.requireNonNull(originalPath);
+		Objects.requireNonNull(originalSubprogram);
+		if (!(refactoring instanceof RWARefactoring)) {
+			throw new IllegalArgumentException();
+		}
+		return new CallerRefactoring(originalPath, originalSubprogram, (RWARefactoring) refactoring);
+	}
+
 }
