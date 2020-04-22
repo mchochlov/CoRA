@@ -287,8 +287,8 @@ arrayDeclaratorExtents
    ;
 
 arrayDeclaratorExtent
-   : iexprCode (COLON (iexprCode | STAR))?
-   | expression1
+   : expression1
+   | iexprCode (COLON (iexprCode | STAR))? 
    | STAR
    ;
 
@@ -308,7 +308,7 @@ commonStatement
    ;
 
 commonName
-   : DIV ((NAME|INTENTION|PRINT|CASE| TYPE) DIV | DIV)
+   : DIV (identifier DIV | DIV)
    ;
 
 commonItem
@@ -1077,6 +1077,9 @@ identifier
    | DEALLOCATE
    | SUM
    | KIND
+   | PRINT
+   | CASE
+   | TYPE
    ;
 
 to : NAME

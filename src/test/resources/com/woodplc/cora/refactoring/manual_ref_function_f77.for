@@ -1,6 +1,6 @@
 C
 C
-      FUNCTION ANGLE(ANGCOS,ANGSIN, PI)
+      FUNCTION ANGLE(ANGCOS, ANGSIN, PI)
 C
                             
       IMPLICIT NONE

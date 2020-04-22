@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.woodplc</groupId>
 	<artifactId>cora</artifactId>
-	<version>0.1.8-SNAPSHOT</version>
+	<version>0.1.9-SNAPSHOT</version>
 	<name>Code Reunification Application</name>
 
 	<properties>
@@ -232,6 +232,28 @@
         	<version>${openjfx.version}</version>
         	<classifier>linux</classifier>
     	</dependency>
+    	
+    	<dependency>
+    		<groupId>org.eclipse.jgit</groupId>
+    		<artifactId>org.eclipse.jgit</artifactId>
+    		<version>5.2.1.201812262042-r</version>
+    		<scope>test</scope>
+		</dependency>
+    	
+    	<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+		<dependency>
+    		<groupId>org.slf4j</groupId>
+    		<artifactId>slf4j-api</artifactId>
+    		<version>2.0.0-alpha1</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
+		<dependency>
+    		<groupId>org.slf4j</groupId>
+    		<artifactId>slf4j-log4j12</artifactId>
+		    <version>2.0.0-alpha1</version>
+    		<scope>test</scope>
+		</dependency>
 		
 	</dependencies>
 </project>

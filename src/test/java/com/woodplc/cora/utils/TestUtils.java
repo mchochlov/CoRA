@@ -35,7 +35,11 @@ public final class TestUtils {
 		FLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\FlexcomAnalysis\\Flex3")),
 		DPRFLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\DeepRiserAnalysis\\Dprflex3")),
 		MAM(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\PipeLayAnalysis\\mam")), 
-		CAF(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\CAF\\Preprocessing"));
+		CAF(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\CAF\\Preprocessing")),
+		FLEXCOM(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\FlexcomAnalysis")),
+		DEEPRISER(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\DeepRiserAnalysis")),
+		PIPELAY(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\PipeLayAnalysis")), 
+		CAF_ROOT(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\CAF"));
 		
 		private final Path path;
 		
