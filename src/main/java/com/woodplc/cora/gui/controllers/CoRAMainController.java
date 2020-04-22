@@ -92,6 +92,7 @@ public class CoRAMainController {
 	private ModuleContainer moduleA = ModuleContainer.empty();
 	private ModuleContainer moduleB = ModuleContainer.empty();
 	private ModuleContainer moduleC = ModuleContainer.empty();
+	private ModuleContainer cafModule = ModuleContainer.empty();
 	
 	private Feature feature = new Feature();
 	
@@ -127,6 +128,17 @@ public class CoRAMainController {
     private Button systemCParseBtn;
     @FXML
     private ProgressBar systemCProgressBar;
+    
+    @FXML
+    private Label cafLbl;
+    @FXML
+    private TextField cafDirFld;
+    @FXML
+    private Button cafBrowseBtn;
+    @FXML
+    private Button cafParseBtn;
+    @FXML
+    private ProgressBar cafProgressBar;
 	
 	
 	@FXML
@@ -218,6 +230,7 @@ public class CoRAMainController {
 		this.moduleA = state.getModuleA();
 		this.moduleB = state.getModuleB();
 		this.moduleC = state.getModuleC();
+		this.cafModule = state.getCafModule();
 		this.feature = state.getFeature();
 		filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
 	}
@@ -285,6 +298,7 @@ public class CoRAMainController {
 	    initializeModule(moduleA, systemADirFld, systemALbl, systemABottomLbl, systemAParseBtn, systemAProgressBar);
 		initializeModule(moduleB, systemBDirFld, systemBLbl, systemBBottomLbl, systemBParseBtn, systemBProgressBar);
 		initializeModule(moduleC, systemCDirFld, systemCLbl, systemCBottomLbl, systemCParseBtn, systemCProgressBar);
+		initializeModule(cafModule, cafDirFld, cafLbl, null, cafParseBtn, cafProgressBar);
 		
 		searchTxtFld.setText(lastSearchQuery);
 		systemASubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
@@ -405,7 +419,9 @@ public class CoRAMainController {
 			if (path != null) {
 				dirField.setText(path.toString());
 				topLabel.setText(path.getFileName().toString());
-				bottomLabel.setText(path.getFileName().toString());
+				if (bottomLabel != null) {
+					bottomLabel.setText(path.getFileName().toString());					
+				}
 			}
 			if (module.getCheckSum() != null) {
 				parse(module, parseBtn, progressBar);
@@ -428,6 +444,11 @@ public class CoRAMainController {
 		open(moduleC, systemCProgressBar, Main.getResources().getString("select_system_c"), systemCDirFld, systemCLbl, systemCBottomLbl);
     }
 
+    @FXML
+    void openCafBrowseDlg(ActionEvent event) {
+		open(cafModule, cafProgressBar, Main.getResources().getString("select_caf"), cafDirFld, cafLbl, null);
+    }
+    
 	private void open(ModuleContainer module, ProgressBar pBar, String title, TextField txtField, Label label, Label bLabel) {
 		dirChooser.setTitle(title);
 		dirChooser.setInitialDirectory(lastKnownDir);
@@ -438,7 +459,9 @@ public class CoRAMainController {
 			module.setPath(selectedDir.toPath());
 			pBar.progressProperty().set(DOUBLE_ZERO);
 			label.setText(module.getPath().getFileName().toString());
-			bLabel.setText(module.getPath().getFileName().toString());
+			if (bLabel != null) {
+				bLabel.setText(module.getPath().getFileName().toString());
+			}
 			lastKnownDir = selectedDir;
 		}
 	}
@@ -456,6 +479,11 @@ public class CoRAMainController {
     @FXML
     void parseSystemC(ActionEvent event) {
 		parse(moduleC, systemCParseBtn, systemCProgressBar);
+    }
+    
+    @FXML
+    void parseCaf(ActionEvent event) {
+		parse(cafModule, cafParseBtn, cafProgressBar);
     }
 	
 	private void parse(ModuleContainer module, Button parseBtn, ProgressBar progressBar) {
@@ -1019,6 +1047,6 @@ public class CoRAMainController {
 	public ApplicationState getApplicationState() {
 		String searchQuery = searchTxtFld == null ? null : searchTxtFld.getText();
 		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
-				moduleA, moduleB, moduleC, feature);
+				moduleA, moduleB, moduleC, cafModule, feature);
 	}
 }
