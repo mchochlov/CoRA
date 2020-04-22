@@ -143,6 +143,9 @@ subroutine mainb
   use poisson_data, only: poisson
   use mod_common_database, only: db_plas_strain, db_eqv_plas_strain, idbcon
   use mod_cloud_licensing, only : set_token_threshold_time, successful_token_analysis
+  use node_set_data, only : ndset_defn, ndset_name, ndset_nod, nndset
+  use pipe_in_pipe_data, only : nested_section_limit, pip_inner_node,  &
+	& pip_nodes, pip_section
   implicit none
   
   ! Declare local variables

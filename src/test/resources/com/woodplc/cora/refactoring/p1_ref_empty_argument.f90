@@ -65,6 +65,8 @@
       use hddim, only : numel, nonp, nnode, ndeg, ngens, ncord, n1, nnode2, n2
       use hp_tensioner_data, only : deallocate_hp_tensioner_data
       use vdu, only: iscrn
+      use ANALYSIS_DATA, only : axial_capacity_analysis_flag, FATIGUE_ANALYSIS,  &
+	& ILOG, PARA_ANALYSIS_NO, PARA_REC_NO
       IMPLICIT NONE
       !*--MAINA299
       !
@@ -72,6 +74,10 @@
       !
       ! COMMON VARIABLES
       !
+      
+      common /DIRNAM/ ANALYSIS_DIR, STUMP
+      CHARACTER(256) :: ANALYSIS_DIR
+      CHARACTER(256) :: STUMP
       REAL(8) :: RHOA, STATIM, TIMLAST, WHEAD, WVEL
       REAL(8), DIMENSION(40) :: DUMP, FC, FW
       INTEGER :: IADM, IALL, ICALST,                                          &

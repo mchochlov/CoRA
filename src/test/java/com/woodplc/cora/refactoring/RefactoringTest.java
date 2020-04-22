@@ -77,6 +77,8 @@ class RefactoringTest {
 	
 	private static final String FESOLVER_BRANCH = "12498-FESolver";
 	private static final String PIP_BRANCH = "12824_Pipe-in-Pipe";
+	private static final String P1_ORIG_NDFORC = "p1_orig_ndforc.f90";
+	private static final String P1_REF_NDFORC = "p1_ref_ndforc.f90";
 	
 	@BeforeAll
 	public static void initGitRepos() throws IOException, RefAlreadyExistsException, RefNotFoundException, InvalidRefNameException, CheckoutConflictException, GitAPIException {
@@ -170,6 +172,18 @@ class RefactoringTest {
 		autoRefactoredSubprogram = refactoring.refactor();
 		autoRefactoredSubprogram.forEach(System.out::println);
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
+		//test caller
+		Set<String> callers = systemGraph.getSubprogramCallers("TRANSF");
+		assertNotNull(callers);
+		assertEquals(callers.size(), 3);
+		originalPath = Paths.get(getClass().getResource(P1_ORIG_NDFORC).toURI());
+		originalSubprogram = Files.lines(originalPath);
+		manuallyRefactoredSubprogram = Files.readAllLines(Paths.get(getClass().getResource(P1_REF_NDFORC).toURI()));
+
+		refactoring = Refactorings.createCallerRefactoring(originalPath, originalSubprogram, refactoring);
+		autoRefactoredSubprogram = refactoring.refactor();
+		autoRefactoredSubprogram.forEach(System.out::println);
+		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));		
 		
 		//with empty arg list
 		originalPath = Paths.get(getClass().getResource(ORIGINAL_EMPTY_ARG).toURI());
@@ -184,7 +198,7 @@ class RefactoringTest {
 		assertTrue(manuallyRefactoredSubprogram.equals(autoRefactoredSubprogram));
 		
 		//test caller
-		Set<String> callers = systemGraph.getSubprogramCallers("OPEN_PARAMETER_LOG_FILE");
+		callers = systemGraph.getSubprogramCallers("OPEN_PARAMETER_LOG_FILE");
 		assertNotNull(callers);
 		assertEquals(callers.size(), 1);
 		originalPath = Paths.get(getClass().getResource(P1_ORIGINAL_EMPTY_ARG).toURI());

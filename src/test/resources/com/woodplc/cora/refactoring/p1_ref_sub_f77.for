@@ -13,7 +13,8 @@ C
       USE PARAMETERS, ONLY : PI
       USE WAVE_DATA, ONLY : NDIMWV, DIRDOM, FPEAK, NDIR, NHH,                       
      &  ISEA, AT, NUM_DIV
-      USE WAVE_SPECTRUM_DATA, ONLY : SPARR                       
+      USE WAVE_SPECTRUM_DATA, ONLY : SPARR
+      use PARAMETERS, only : SMALLNUM                       
       IMPLICIT NONE
 C
 C COMMON variables

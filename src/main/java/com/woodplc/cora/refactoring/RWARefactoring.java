@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -26,6 +27,8 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.Trees;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.io.MoreFiles;
 import com.woodplc.cora.data.DefAndUseMapper;
 import com.woodplc.cora.data.ModuleVariable;
@@ -37,6 +40,7 @@ import com.woodplc.cora.grammar.Fortran77Parser.ArrayDeclaratorExtentContext;
 import com.woodplc.cora.grammar.Fortran77Parser.ArrayOrFunctionExpressionContext;
 import com.woodplc.cora.grammar.Fortran77Parser.AssignmentStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CallArgumentContext;
+import com.woodplc.cora.grammar.Fortran77Parser.CommonBlockContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonItemContext;
 import com.woodplc.cora.grammar.Fortran77Parser.CommonStatementContext;
 import com.woodplc.cora.grammar.Fortran77Parser.ControlInfoListContext;
@@ -109,6 +113,11 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 		private final OrderedCaseInsensitiveSet<String> argumentSet;
 		private Token argumentListStartToken = null;
 		private Token argumentListStopToken = null;
+		private final SetMultimap<String, String> savedModuleVariables = SetMultimapBuilder
+				.treeKeys(String.CASE_INSENSITIVE_ORDER)
+				.treeSetValues(String.CASE_INSENSITIVE_ORDER).build(); 
+		private final Map<String, OrderedCaseInsensitiveSet<String>> savedCommonStatements;
+		private final Map<String, String> savedTypeStatements;
 		
 		private final Set<ArgumentVariable> variables;
 		private final Set<String> commonItems;
@@ -151,6 +160,8 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 			this.localVariables = new ArrayList<>();
 			this.ioItems = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 			this.arrayNames =  new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+			this.savedCommonStatements = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+			this.savedTypeStatements = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		}
 
 		@Override
@@ -344,6 +355,9 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 				} else {
 					throw new IllegalArgumentException();
 				}
+				
+				savedTypeStatements.put(varName, declaration + tsnc.getText());
+				
 				if (argumentSet.contains(varName) || (subName != null && subName.equalsIgnoreCase(varName))) {
 					if (ctx.dimensionStatement().isEmpty() && tsnc.arrayDeclarator() == null) {
 						variables.add(ArgumentVariable.ofScalarType(varName, declaration, ctx.intentAttribute()));
@@ -428,6 +442,7 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 								generateAllocationParameters(mv.getAllocationParameters(), ctx);
 							}
 							argumentSet.add(variableName);
+							savedModuleVariables.put(moduleName, variableName);
 						} else {
 							localErrors.append(MODULE_VAR_NOT_FOUND_COMMENT).append(moduleName)
 								.append(" :: ").append(variableName).append("\n").append(tab);
@@ -472,8 +487,16 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 
 		@Override
 		public void exitCommonStatement(CommonStatementContext ctx) {
-			for (CommonItemContext cic : ctx.commonBlock(0).commonItems().commonItem()) {
-				commonItems.add(cic.getText());
+			if (ctx.commonBlock() == null || ctx.commonBlock().isEmpty()) {
+				throw new UnsupportedOperationException();
+			}
+			for (CommonBlockContext cbc : ctx.commonBlock()) {
+				OrderedCaseInsensitiveSet<String> commonItemsSet = new OrderedCaseInsensitiveSet<>(String.CASE_INSENSITIVE_ORDER);
+				for (CommonItemContext cic : cbc.commonItems().commonItem()) {
+					commonItems.add(cic.getText());
+					commonItemsSet.add(cic.getText());
+				}
+				savedCommonStatements.put(cbc.commonName().identifier().getText(), commonItemsSet);
 			}
 			rw.delete(ctx.getStart(), ctx.getStop());
 		}
@@ -673,21 +696,19 @@ class RWARefactoring extends AbstractFortran77Refactoring implements Refactoring
 		
 	}
 
-	public List<String> getArgumentListNonNull() {
-		return rwaRewriter.argumentSet.nonNullValues();
+	public OrderedCaseInsensitiveSet<String> getArgumentSet() {
+		return rwaRewriter.argumentSet;
 	}
-
-	public boolean isArgListEmpty() {
-		return rwaRewriter.argumentSet.isEmpty();
-	}
-
-	public int getArgumentListSize() {
-		return rwaRewriter.argumentSet.size();
-	}
-
-	public String getArgument(int i) {
-		return rwaRewriter.argumentSet.get(i);
-	}
-
 	
+	public SetMultimap<String, String> getSavedModuleVariables() {
+		return rwaRewriter.savedModuleVariables;
+	}
+	
+	public Map<String, OrderedCaseInsensitiveSet<String>> getSavedCommonStatements() {
+		return rwaRewriter.savedCommonStatements;
+	}
+	
+	public Map<String, String> getTypestatements() {
+		return rwaRewriter.savedTypeStatements;
+	}
 }
