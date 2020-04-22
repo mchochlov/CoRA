@@ -160,7 +160,7 @@
                            <children>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_a_lbl">
+                                    <Label minWidth="80.0" text="%system_a_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -185,7 +185,7 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_b_lbl">
+                                    <Label minWidth="80.0" text="%system_b_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -210,7 +210,7 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_c_lbl">
+                                    <Label minWidth="80.0" text="%system_c_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -224,6 +224,31 @@
                                     <Button fx:id="systemCBrowseBtn" mnemonicParsing="false" onAction="#openSystemCBrowseDlg" text="%browse_btn" />
                                     <Button fx:id="systemCParseBtn" mnemonicParsing="false" onAction="#parseSystemC" text="%parse_btn" />
                                     <ProgressBar fx:id="systemCProgressBar" prefWidth="150.0" progress="0.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                 </children>
+                                 <padding>
+                                    <Insets left="15.0" right="15.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox layoutX="10.0" layoutY="85.0" spacing="10.0">
+                                 <children>
+                                    <Label minWidth="80.0" text="%caf_lbl">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <Label fx:id="cafLbl" minWidth="-Infinity" prefWidth="60.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField fx:id="cafDirFld" />
+                                    <Button fx:id="cafBrowseBtn" mnemonicParsing="false" onAction="#openCafBrowseDlg" text="%browse_btn" />
+                                    <Button fx:id="cafParseBtn" mnemonicParsing="false" onAction="#parseCaf" text="%parse_btn" />
+                                    <ProgressBar fx:id="cafProgressBar" prefWidth="150.0" progress="0.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
