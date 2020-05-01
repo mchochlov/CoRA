@@ -19,13 +19,13 @@ allocOpt : optKeywords '=' identifier;
 optKeywords : STAT | ERRMSG | SOURCE | MOLD;
 
 typeStatementNameList
-   : typeStatementName (',' typeStatementName)*
-   | assignmentStatement (',' assignmentStatement)*
+   : assignmentStatement (',' assignmentStatement)*
+   | typeStatementName (',' typeStatementName)*
    ;
    
 typeStatementName
-   : identifier
-   | arrayDeclarator
+   : arrayDeclarator
+   |identifier 
    ;
    
 assignmentStatement

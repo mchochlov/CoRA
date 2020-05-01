@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -51,23 +52,26 @@ class JSONUtilsTest {
 	
 	@Test
 	void testStateLoadRestoreIntegrity() throws IOException {
+		Path tmpFile = Paths.get("test");
 		ApplicationState emptyState = TestUtils.emptyApplicationState();
 		assertNotNull(emptyState);
-		JSONUtils.stateToJson(emptyState);
+		JSONUtils.stateToJson(emptyState, tmpFile);
 		
-		ApplicationState restoredEmptyState = JSONUtils.stateFromJson();
+		ApplicationState restoredEmptyState = JSONUtils.stateFromJson(tmpFile);
 		assertNotNull(restoredEmptyState);
 		assertTrue(emptyState != restoredEmptyState);
 		assertTrue(emptyState.equals(restoredEmptyState));
 		
 		ApplicationState nonEmptyState = TestUtils.fullyInitializedApplicationState();
 		assertNotNull(nonEmptyState);
-		JSONUtils.stateToJson(nonEmptyState);
+		JSONUtils.stateToJson(nonEmptyState, tmpFile);
 		
-		ApplicationState restoredNonEmptyState = JSONUtils.stateFromJson();
+		ApplicationState restoredNonEmptyState = JSONUtils.stateFromJson(tmpFile);
 		assertNotNull(restoredNonEmptyState);
 		assertTrue(nonEmptyState != restoredNonEmptyState);
 		assertTrue(nonEmptyState.equals(restoredNonEmptyState));
+		
+		Files.delete(tmpFile);
 	}
 	
 	@Test

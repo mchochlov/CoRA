@@ -323,4 +323,24 @@
          </menus>
       </MenuBar>
    </top>
+   <bottom>
+      <HBox BorderPane.alignment="CENTER">
+         <children>
+            <Label fx:id="statusLabel" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets right="5.0" />
+               </HBox.margin>
+            </Label>
+            <HBox prefWidth="200.0" HBox.hgrow="NEVER">
+               <children>
+                  <Label maxWidth="1.7976931348623157E308" text="%ref_jobs" HBox.hgrow="ALWAYS" />
+                  <Label fx:id="jobsNumberLabel" minWidth="20.0" HBox.hgrow="NEVER" />
+               </children>
+            </HBox>
+         </children>
+         <padding>
+            <Insets bottom="15.0" left="15.0" right="15.0" />
+         </padding>
+      </HBox>
+   </bottom>
 </BorderPane>

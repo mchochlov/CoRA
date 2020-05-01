@@ -20,7 +20,7 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 	public String formatParameterAllocationErrors(List<String> parameterAllocationErrors) {
 		StringBuilder output =  new StringBuilder();
 		for (String error : parameterAllocationErrors) {
-			output.append("C ").append(error).append("\n").append(fixedOffset);
+			output.append("C ").append(error).append("\r\n").append(fixedOffset);
 		}
 		return output.toString();
 	}
@@ -29,15 +29,15 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 	public String formatIntentStatements(List<String> existingIntentStatements) {
 		StringBuilder output =  new StringBuilder();
 		for (String string : existingIntentStatements) {
-			output.append("\n").append(fixedOffset + " ").append(string);
+			output.append("\r\n").append(fixedOffset + " ").append(string);
 		}
 		return output.toString();
 	}
 
 	@Override
 	public String formatLocalVariableComment() {
-		return new StringBuilder().append("\n").append("C ").append("Local variables")
-				.append("\n").append(fixedOffset + " ")
+		return new StringBuilder().append("\r\n").append("C ").append("Local variables")
+				.append("\r\n").append(fixedOffset + " ")
 				.toString();
 	}
 
@@ -58,7 +58,7 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 	@Override
 	public String commentStatement(String text, int position) {
 		String tab = getTab(position);
-		return "\nc" + tab.substring(0, tab.length() - 1) + text + "\n" + tab;
+		return "\r\nc" + tab.substring(0, tab.length() - 1) + text.replaceAll("\r\n", "\r\nc") + "\r\n" + tab;
 	}
 
 	@Override
@@ -66,7 +66,7 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 		String tab = getTab(useStatementOffset);
 		StringBuilder output =  new StringBuilder();
 		for (Map.Entry<String, Collection<String>> entry : entrySet) {
-			output.append("\n").append(tab).append("use ").append(entry.getKey()).append(", only : ")
+			output.append("\r\n").append(tab).append("use ").append(entry.getKey()).append(", only : ")
 			.append(formatVariableList(entry.getValue(), 13 + tab.length() + entry.getKey().length()));
 		}
 		return output.toString();
@@ -76,7 +76,7 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 		StringBuilder output = new StringBuilder();
 		for (String arg : list) {
 			if (offset + arg.length() + 2 > ARGUMENT_OFFSET) {			
-				output.append("\n").append(fixedOffset).append("& ").append(arg).append(", ");
+				output.append("\r\n").append(fixedOffset).append("& ").append(arg).append(", ");
 				offset = 9 + arg.length();
 			} else {
 				output.append(arg).append(", ");	
@@ -97,17 +97,17 @@ final class FixedFormFortranFormatter implements FortranFormatter {
 		String tab = getTab(commonStatementOffset);
 		StringBuilder output =  new StringBuilder();
 		for (Map.Entry<String, OrderedCaseInsensitiveSet<String>> entry : savedCommonStatements.entrySet()) {
-			output.append("\n").append(tab).append("common /").append(entry.getKey()).append("/ ")
+			output.append("\r\n").append(tab).append("common /").append(entry.getKey()).append("/ ")
 			.append(formatVariableList(entry.getValue().allValues(), 10 + tab.length() + entry.getKey().length()));
 			for (String var : entry.getValue().allValues()) {
 				if (!savedTypeStatements.containsKey(var)) {
 					throw new IllegalStateException();
 				}
-				output.append("\n").append(tab).append(savedTypeStatements.get(var));
+				output.append("\r\n").append(tab).append(savedTypeStatements.get(var));
 			}
 		}
 		if (output.length() > 0) {
-			output.append("\n").append(tab);
+			output.append("\r\n").append(tab);
 		}
 		return output.toString();
 	}

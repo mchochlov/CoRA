@@ -7,11 +7,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
+
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -19,6 +24,7 @@ import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalListeners;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ImmutableModule;
+import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.ir.IREngine;
 import com.woodplc.cora.ir.IREngines;
@@ -27,6 +33,8 @@ import com.woodplc.cora.parser.Parsers;
 
 final class FSRepository implements Repository {
 
+	final Logger logger = LoggerFactory.getLogger(FSRepository.class);
+	
 	private final static long SECONDS_TO_WAIT = 5;
 	private final static int N_SYSTEMS = 3;
 	private final static int CACHE_SIZE = N_SYSTEMS * 2;
@@ -55,16 +63,23 @@ final class FSRepository implements Repository {
 
 		if (checkSum.isEmpty()) throw new IllegalArgumentException();
 		
+		if (modules.getIfPresent(checkSum) != null) {
+			logger.info("Loading {} from cache with checksum {}", path.getFileName(), checkSum);
+		}
+		
 		return modules.get(checkSum, () -> {
 			Path entryPath = Repositories.pathForCheckSum(checkSum);
 			if (Files.isDirectory(entryPath)) {
 				try {
+					logger.info("Loading {} from repository with checksum {}", path.getFileName(), checkSum);
 					return loadFromRepository(entryPath);
 				} catch (EntryReadException e) {
 					e.printStackTrace();
+					logger.error("Error loading {} with checksum {}: recalculating", path.getFileName(), checkSum);
 					return calculateNew(checkSum, path, consumer);
 				}
 			} else {
+				logger.info("Creating new repository for {} with checksum {}", path.getFileName(), checkSum);
 				return calculateNew(checkSum, path, consumer);
 			}
 		});
@@ -142,6 +157,43 @@ final class FSRepository implements Repository {
 			
 			return ImmutableModule.nonPersistent(graph, engine);
 	    }
+	}
+
+	@Override
+	public ImmutableModule updateOrRetrieve(ModuleContainer module, String oldCheckSum, Path path) throws ExecutionException {
+		if (modules.getIfPresent(module.getCheckSum()) != null) {
+			logger.info("Loading {} from cache with checksum {}", path.getFileName(), module.getCheckSum());
+		}
+		return modules.get(module.getCheckSum(), () -> {
+			Path entryPath = Repositories.pathForCheckSum(module.getCheckSum());
+			if (Files.isDirectory(entryPath)) {
+				try {
+					logger.info("Update: {} with checksum {} already exists - loading from repository", path.getFileName(), module.getCheckSum());
+					return loadFromRepository(entryPath);
+				} catch (EntryReadException e) {
+					e.printStackTrace();
+					logger.error("Update error: cannot load {} with checksum {}", path.getFileName(), module.getCheckSum());
+					return null;//calculateNew(checkSum, path, consumer);
+				}
+			} else {
+				logger.info("Update: generating new repository for {} with checksum {}", path.getFileName(), module.getCheckSum());
+				return updateAndReturn(module, oldCheckSum, path);
+			}
+		});
+	}
+
+	private ImmutableModule updateAndReturn(ModuleContainer module, String oldCheckSum, Path path) throws IOException {
+		Objects.requireNonNull(module.getPath());
+		//copy lucene dir
+		FileUtils.copyDirectory(Repositories.pathForCheckSum(oldCheckSum).toFile(), 
+				Repositories.pathForCheckSum(module.getCheckSum()).toFile(), false);
+		IREngine engine = IREngines.existingWriteableInstance(Repositories.pathForCheckSum(module.getCheckSum()));
+		Parser parser = Parsers.indexableFortranParser(engine);
+		SDGraph graph = Graphs.copyOf(module.getModule().getGraph());
+		graph.updateSubprograms(parser.parse(path).subprograms());
+		engine.save();
+			
+		return ImmutableModule.nonPersistent(graph, engine);
 	}
 	
 }

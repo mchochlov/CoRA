@@ -111,7 +111,7 @@ class ClonesController extends Controller {
 				.collect(Collectors.toSet());
 		systemSubprograms.addAll(clones);
 		this.clones.removeAll(selectedClones);
-		feature.addRefactoringCasesFromClones(pathA, path, subname, clones);
+		//feature.addRefactoringCasesFromClones(pathA, path, subname, clones);
 	}
 
 	static class FindClonesTask extends Task<List<SearchEntryView>> {

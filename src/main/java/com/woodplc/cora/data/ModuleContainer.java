@@ -27,7 +27,7 @@ public final class ModuleContainer {
 
 	public void setCheckSum(String checkSum) {
 		if (checkSum == null || checkSum.isEmpty()) throw new IllegalArgumentException();
-		if (this.path == null || this.module != null) throw new IllegalStateException();
+		if (this.path == null) throw new IllegalStateException();
 		this.checkSum = checkSum;
 	}
 	
@@ -46,5 +46,11 @@ public final class ModuleContainer {
 		
 		Path fpath = path == null ? null : Paths.get(path);
 		return new ModuleContainer(fpath, checkSum, null);
+	}
+
+	public String updateCheckSum(String checkSum) {
+		String old = this.checkSum;
+		this.checkSum = checkSum;
+		return old;
 	}	
 }

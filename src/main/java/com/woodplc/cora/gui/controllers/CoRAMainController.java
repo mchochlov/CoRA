@@ -2,21 +2,30 @@ package com.woodplc.cora.gui.controllers;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
@@ -32,12 +41,16 @@ import com.woodplc.cora.gui.model.CallDependencyView;
 import com.woodplc.cora.gui.model.RefactoringCaseView;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
+import com.woodplc.cora.refactoring.Refactoring;
+import com.woodplc.cora.refactoring.Refactorings;
 import com.woodplc.cora.storage.JSONUtils;
 import com.woodplc.cora.storage.Repositories;
 import com.woodplc.cora.utils.CSVUtils;
 import com.woodplc.cora.utils.Utils;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -60,6 +73,7 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
@@ -75,6 +89,8 @@ import javafx.util.Callback;
 
 public class CoRAMainController {
 	    
+	final Logger logger = LoggerFactory.getLogger(CoRAMainController.class);
+	
 	private static final double DOUBLE_ZERO = 0;
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
 	private final FileChooser exportChooser = new FileChooser();
@@ -83,8 +99,11 @@ public class CoRAMainController {
 	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
 	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
 	private final Alert featureIsEmpty = new Alert(AlertType.INFORMATION, Main.getResources().getString("feature_empty"));
+	private final Alert successfulRefactoring = new Alert(AlertType.INFORMATION, Main.getResources().getString("refactor_success"));
+	private final Alert failRefactoring = new Alert(AlertType.WARNING, Main.getResources().getString("refactor_success"));
 	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
 	private final Alert aboutAlert = new Alert(AlertType.INFORMATION, Main.getResources().getString("cora_about"));
+	private final Alert dirChanged = new Alert(AlertType.INFORMATION);
 	
 	private final ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList();
 	private final FilteredList<SearchEntryView> filteredSearchResults = new FilteredList<>(searchResults);
@@ -95,6 +114,12 @@ public class CoRAMainController {
 	private ModuleContainer cafModule = ModuleContainer.empty();
 	
 	private Feature feature = new Feature();
+	
+	public static WatchService watchService;
+	private final Map<WatchKey, Path> watchPaths = new HashMap<>();
+	final static Queue<Path> processingQueue = new ConcurrentLinkedQueue<>();
+	
+	private final AtomicInteger refJobCounter = new AtomicInteger();
 	
 	@FXML
 	private Label systemALbl;
@@ -195,6 +220,14 @@ public class CoRAMainController {
 	private Stack<String> commandStack = new Stack<>();
 	@FXML
 	private BorderPane borderPane;
+	
+	@FXML
+    private Label statusLabel;
+
+	@FXML
+	private Label jobsNumberLabel;
+	private final AtomicInteger atomicCounter = new AtomicInteger(0);
+	private final SimpleIntegerProperty counter = new SimpleIntegerProperty(0);
 
     // TAB 2
     @FXML
@@ -238,13 +271,60 @@ public class CoRAMainController {
 	@FXML
 	void initialize() {     
 
+		jobsNumberLabel.textProperty().bind(counter.asString());
+		
+		try {
+			watchService = FileSystems.getDefault().newWatchService();
+			Main.getWatchServicePoolInstance().submit(() -> 
+				{
+					try {
+						for (;;) {
+				            WatchKey key = watchService.take();
+				            Path dir = watchPaths.get(key);
+				            if (dir == null) {
+				            	logger.error("WatchKey not recognized!!");
+				                continue;
+				            }
+				            Thread.sleep(50);
+				            key.pollEvents();
+	
+				            if (!CoRAMainController.processingQueue.isEmpty() && CoRAMainController.processingQueue.peek().equals(dir)) {
+								CoRAMainController.processingQueue.poll();
+							} else {
+					            Platform.runLater(new Runnable() {
+					                 @Override 
+					                 public void run() {
+					                	 if (!dirChanged.isShowing()) {
+						                	 dirChanged.setContentText(dir.getFileName() + " system source code has changed. Refresh model.");
+									         dirChanged.showAndWait();
+					                	 }
+					                 }
+					            });
+							}			          
+				            if (!key.reset()) {
+			                    break;
+				            }
+				        } 
+					}	catch(InterruptedException ie) {
+						logger.info("Watch service thread interrupted.");
+			        	return;
+					}
+					
+				});
+		} catch (IOException e1) {
+			logger.error("Failed to initialize watch service.");
+		}
+		
 		if (SystemUtils.IS_OS_LINUX) {
 			
 			graphNotFoundAlert.initModality(Modality.NONE);
 			multipleSelectionAlert.initModality(Modality.NONE);
+			successfulRefactoring.initModality(Modality.NONE);
+			failRefactoring.initModality(Modality.NONE);
 			featureIsEmpty.initModality(Modality.NONE);
 			illegalStateAlert.initModality(Modality.NONE);
 			aboutAlert.initModality(Modality.NONE);
+			dirChanged.initModality(Modality.NONE);
 			
 			fileMenu.setOnHiding(e -> commandStack.push("file"));
 			
@@ -395,7 +475,8 @@ public class CoRAMainController {
 				externalSubprograms = module.getModule().getGraph().getExternalSubprograms();
 				setTextFill(externalSubprograms.contains(item) ? Color.GREEN : Color.BLACK);
 			} catch (ProgramEntryNotFoundException e) {
-				e.printStackTrace();
+				logger.error("Program entry point not found for module [{}]: unreferenced subprograms cannot be detected.", 
+						module.getPath().getFileName().toString());
 			}
 	        
 	    }
@@ -496,12 +577,12 @@ public class CoRAMainController {
 
 				@Override
 				protected ImmutableModule call() throws Exception {
-					String checkSum = module.getCheckSum();
-					if (checkSum == null) {
-						checkSum = Repositories.checkSumForPath(path);
-						module.setCheckSum(checkSum);	
+					String loadedCheckSum = module.getCheckSum();
+					String currentCheckSum = Repositories.checkSumForPath(path);
+					if (loadedCheckSum == null || !loadedCheckSum.equals(currentCheckSum)) {
+						module.setCheckSum(currentCheckSum);	
 					}
-					return Repositories.getInstance().retrieve(checkSum, path, this::updateProgress);
+					return Repositories.getInstance().retrieve(module.getCheckSum(), path, this::updateProgress);
 				}
 
 				@Override
@@ -514,6 +595,16 @@ public class CoRAMainController {
 				protected void succeeded() {
 					updateState(getValue(), ProgressBarColor.GREEN);
 					systemASubprogramList.refresh();
+					try {
+						if (watchService == null) throw new IOException();
+						WatchKey key = path.register(watchService,
+						           StandardWatchEventKinds.ENTRY_CREATE,
+						           StandardWatchEventKinds.ENTRY_DELETE,
+						           StandardWatchEventKinds.ENTRY_MODIFY);
+						watchPaths.put(key, path);
+					} catch (IOException e) {
+						logger.error("Failure registering watch service for {}", path.getFileName());
+					}
 				}
 				
 				private void updateState(ImmutableModule im, ProgressBarColor color) {
@@ -578,7 +669,7 @@ public class CoRAMainController {
 	@FXML
 	void systemAAdjacentSubprograms(ActionEvent event) throws IOException {
 		//TODO
-		moduleA.getModule().getGraph().printSubgraph(new HashSet<String>(feature.systemASubprograms()));
+		//moduleA.getModule().getGraph().printSubgraph(new HashSet<String>(feature.systemASubprograms()));
 		loadStage(Resource.ADJACENT_FXML, "adjacent_sub_title", moduleA, feature.systemASubprograms(), null, Modality.APPLICATION_MODAL);
 	}
 
@@ -591,7 +682,7 @@ public class CoRAMainController {
 				.map(SearchEntryView::getName)
 				.collect(Collectors.toList());
 		feature.systemASubprograms().addAll(items);
-		feature.addRefactoringCasesFromSearch(moduleA.getPath().getFileName().toString(), items);
+		//feature.addRefactoringCasesFromSearch(moduleA.getPath().getFileName().toString(), items);
 	}
 
 	@FXML
@@ -638,7 +729,7 @@ public class CoRAMainController {
     	List<String> selectedItems = new ArrayList<>(subprogramList.getSelectionModel().getSelectedItems());
 		if (selectedItems.isEmpty()) {return;}
 		list.removeAll(selectedItems);
-		feature.removeRefactoringCases(path, selectedItems);
+		//feature.removeRefactoringCases(path, selectedItems);
     }
 	
 	private void loadStage(Resource resource, String title, 
@@ -976,6 +1067,78 @@ public class CoRAMainController {
     	}
     }
     
+    @FXML
+    void refactorItemSystemA(ActionEvent event) {
+		refactorItem(systemASubprogramList, moduleA);
+    }
+
+    @FXML
+    void refactorItemSystemB(ActionEvent event) {
+		refactorItem(systemBSubprogramList, moduleB);
+	}
+
+    @FXML
+    void refactorItemSystemC(ActionEvent event) {
+		refactorItem(systemCSubprogramList, moduleC);
+	}
+    
+    private void refactorItem(ListView<String> subprogramList, ModuleContainer module) {
+    	List<String> selectedItems = new ArrayList<>(subprogramList.getSelectionModel().getSelectedItems());
+    	if (selectedItems.isEmpty()) return;
+		if (selectedItems.size() > 1) {
+			multipleSelectionAlert.showAndWait();
+			return;
+		}	
+		
+		if (module == null || cafModule == null || 
+				module.getModule() == null || cafModule.getModule() == null || 
+				(module.getModule().getGraph() == null || module.getModule().getGraph().isEmpty()) || 
+				(cafModule.getModule().getGraph() == null || cafModule.getModule().getGraph().isEmpty())) {
+			graphNotFoundAlert.showAndWait();
+			return;
+		}
+		
+		if (!module.getModule().getGraph().containsSubprogram(selectedItems.get(0))) {
+			illegalStateAlert.showAndWait();
+			return;
+		}
+		
+		RWARefactoringTask rTask = new RWARefactoringTask(selectedItems.get(0), module, cafModule.getModule().getGraph());
+		
+		statusLabel.textProperty().bind(rTask.messageProperty());
+		
+		rTask.setOnSucceeded((e) -> {
+			statusLabel.textProperty().unbind();
+			counter.set(atomicCounter.decrementAndGet());
+
+			if (rTask.getValue().isEmpty()) {
+				statusLabel.setText("Refactoring successfully completed.");
+				successfulRefactoring.showAndWait();
+			} else {
+				statusLabel.setText("Refactoring completed with errors.");
+				TextArea textArea = new TextArea(String.join("\n", rTask.getValue()));
+				textArea.setPrefColumnCount(40);
+				textArea.setPrefRowCount(20);
+				textArea.setEditable(false);
+				textArea.setWrapText(true);
+				failRefactoring.getDialogPane().setContent(textArea);
+				failRefactoring.setHeaderText("There were some refactoring errors.");
+				failRefactoring.showAndWait();
+			}
+			
+		});
+		
+		rTask.setOnFailed((e) -> {
+			statusLabel.textProperty().unbind();
+			statusLabel.setText("Refactoring failed.");
+			rTask.getException().printStackTrace();
+			counter.set(atomicCounter.decrementAndGet());
+		});
+		counter.set(atomicCounter.incrementAndGet());
+		Main.getRefactoringPoolInstance().execute(rTask);
+    }
+    
+    
     private void calculateLoc(Label label, ObservableList<String> subprogramNames, SDGraph graph) {
     	CalculateLocTask cTask = new CalculateLocTask(subprogramNames, graph);
 		cTask.setOnSucceeded((e) -> {
@@ -1048,5 +1211,105 @@ public class CoRAMainController {
 		String searchQuery = searchTxtFld == null ? null : searchTxtFld.getText();
 		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
 				moduleA, moduleB, moduleC, cafModule, feature);
+	}
+	
+	private static class RWARefactoringTask extends Task<List<String>> {
+		
+		final Logger logger = LoggerFactory.getLogger(RWARefactoringTask.class);
+		
+		private final String subName;
+		private final ModuleContainer module;
+		private final SDGraph cafGraph;
+		
+		public RWARefactoringTask(String subName, ModuleContainer module, SDGraph cafGraph) {
+			this.subName = subName;
+			this.module = module;
+			this.cafGraph = cafGraph;
+		}
+
+		@Override
+		protected List<String> call() throws Exception {
+			logger.info("Starting refactoring task for " + subName);
+			updateMessage("Starting refactoring task for " + subName);
+			List<String> refactoringErrors = new ArrayList<>();
+			
+			Optional<SubProgram> subprogram = module.getModule().getGraph().subprograms()
+					.stream()
+					.filter(s -> s.name().equalsIgnoreCase(subName))
+					.findFirst();
+			if (subprogram.isEmpty()) {
+				throw new IllegalStateException();
+			}
+			List<String> originalFile = Utils.readFullLinesFromFile(subprogram.get().path());
+			
+			Stream<String> originalSubprogram = originalFile.stream().limit(subprogram.get().endLine()).skip(subprogram.get().startLine() - 1);
+			
+			Refactoring refactoring = Refactorings.createRWARefactoring(subprogram.get().path(), originalSubprogram, module.getModule().getGraph(), cafGraph);
+			
+			List<String> autoRefactoredSubprogram = refactoring.refactor();
+			
+			List<String> originalSubprogramList = originalFile.stream()
+					.limit(subprogram.get().endLine())
+					.skip(subprogram.get().startLine() - 1)
+					.map(s -> s.replace("\r\n", ""))
+					.collect(Collectors.toList());
+			if (originalSubprogramList.equals(autoRefactoredSubprogram)) {
+				updateMessage("Nothing to refactor: exit.");
+				logger.info("Nothing to refactor: exit.");
+				return refactoringErrors;
+			}
+			if (!refactoring.getErrors().isEmpty()) {
+				refactoringErrors.add(subprogram.get().toString());
+				logger.error("Refactoring errors for : {}", subprogram.get().toString());
+				refactoringErrors.addAll(refactoring.getErrors());
+				refactoring.getErrors().forEach(logger::error);
+			}
+			
+			Utils.updateSubprogramInFile(originalFile, autoRefactoredSubprogram, subprogram.get());
+			CoRAMainController.processingQueue.add(module.getPath());
+
+			updateMessage("Updating IR and SDGraph for " + subName);
+			logger.info("Updating IR and SDGraph for {}", subName);
+			
+			String oldCheckSum = module.updateCheckSum(Repositories.checkSumForPath(module.getPath()));	
+			
+			module.setModule(Repositories.getInstance().updateOrRetrieve(module, oldCheckSum, subprogram.get().path()));
+			
+			updateMessage("Refactoring callers of " + subName);
+			logger.info("Refactoring {} callers", subName);
+
+			Set<String> callerNames = module.getModule().getGraph().getSubprogramCallers(subprogram.get().name());
+			for (String callerName : callerNames) {
+				SubProgram caller = module.getModule().getGraph().subprograms()
+						.stream()
+						.filter(s -> s.name().equalsIgnoreCase(callerName))
+						.findFirst().get();
+				
+				originalFile = Utils.readFullLinesFromFile(caller.path());
+				originalSubprogram = originalFile.stream().limit(caller.endLine()).skip(caller.startLine() - 1);
+				Refactoring callRefactoring = Refactorings.createCallerRefactoring(caller.path(), originalSubprogram, refactoring);
+				autoRefactoredSubprogram = callRefactoring.refactor();	
+				if (!callRefactoring.getErrors().isEmpty()) {
+					refactoringErrors.add(caller.toString());
+					logger.error("Refactoring errors for : {}", caller.toString());
+					refactoringErrors.addAll(callRefactoring.getErrors());
+					callRefactoring.getErrors().forEach(logger::error);
+				}
+				
+				Utils.updateSubprogramInFile(originalFile, autoRefactoredSubprogram, caller);
+				CoRAMainController.processingQueue.add(module.getPath());
+
+				updateMessage("Updating IR and SDGraph for " + caller.name());
+				logger.info("Updating IR and SDGraph for {}", caller.name());
+				oldCheckSum = module.updateCheckSum(Repositories.checkSumForPath(module.getPath()));	
+				module.setModule(Repositories.getInstance().updateOrRetrieve(module, oldCheckSum, caller.path()));
+			}
+						
+			updateMessage("Refactoring completed for " + subName);
+			logger.info("Refactoring completed for " + subName);
+			return refactoringErrors;
+		}
+
+		
 	}
 }
