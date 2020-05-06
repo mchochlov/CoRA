@@ -5,9 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -28,22 +31,24 @@ public final class Repositories {
 	public static Path pathForCheckSum(String checkSum) {
 		return Paths.get(DATA_FOLDER, ROOT_FOLDER, Objects.requireNonNull(checkSum));
 	}
-
+	
 	public static String checkSumForPath(Path path) throws IOException {
 		try (Stream<Path> stream = Files.walk(path)) {
-			Hasher hasher = checksumFunction.newHasher();
-
-			stream
+			
+			List<HashCode> codes = stream
 				.filter(Parsers::isFortranFile)
 				.sorted(Comparator.comparing(Path::toString))
-				.forEach(p -> {
+				.map(p -> {
 					try {
-						hasher.putBytes(Files.readAllBytes(p));
+						return com.google.common.io.Files.asByteSource(p.toFile()).hash(checksumFunction);
 					} catch (IOException e) {
+						// TODO Auto-generated catch block
 						e.printStackTrace();
+						return null;
 					}
-				});
-			return hasher.hash().toString();
+				})
+				.collect(Collectors.toList());
+			return Hashing.combineOrdered(codes).toString();
 		}
 	}
 }

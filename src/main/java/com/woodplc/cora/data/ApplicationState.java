@@ -20,6 +20,7 @@ public final class ApplicationState {
 	private final ModuleState stateA;
 	private final ModuleState stateB;
 	private final ModuleState stateC;
+	private final ModuleState stateCaf;
 	private final FeatureState fState;
 		
 	private static class ModuleState {
@@ -114,11 +115,13 @@ public final class ApplicationState {
 			ModuleContainer moduleA,
 			ModuleContainer moduleB,
 			ModuleContainer moduleC,
+			ModuleContainer cafModule,
 			Feature feature) {
 		Objects.requireNonNull(searchResults);
 		Objects.requireNonNull(moduleA);
 		Objects.requireNonNull(moduleB);
 		Objects.requireNonNull(moduleC);
+		Objects.requireNonNull(cafModule);
 		Objects.requireNonNull(feature);
 		this.lastKnownDir = lastKnownDir == null ? null : lastKnownDir.toString();
 		this.searchQuery = searchQuery;
@@ -129,6 +132,7 @@ public final class ApplicationState {
 		this.stateA = new ModuleState(moduleA.getPath(), moduleA.getCheckSum());
 		this.stateB = new ModuleState(moduleB.getPath(), moduleB.getCheckSum());
 		this.stateC = new ModuleState(moduleC.getPath(), moduleC.getCheckSum());
+		this.stateCaf = new ModuleState(cafModule.getPath(), cafModule.getCheckSum());
 		this.fState = new FeatureState(feature.readOnlySystemASubprograms(), 
 				feature.readOnlySystemBSubprograms(), 
 				feature.readOnlySystemCSubprograms());
@@ -149,6 +153,8 @@ public final class ApplicationState {
 	public ModuleContainer getModuleB() {return ModuleContainer.fromValues(stateB.path, stateB.checkSum);}
 
 	public ModuleContainer getModuleC() {return ModuleContainer.fromValues(stateC.path, stateC.checkSum);}
+	
+	public ModuleContainer getCafModule() {return ModuleContainer.fromValues(stateCaf.path, stateCaf.checkSum);	}
 
 	public Feature getFeature() {
 		return new Feature(Collections.unmodifiableList(fState.subprogramsA), 
@@ -168,12 +174,14 @@ public final class ApplicationState {
 				&& this.stateA.equals(as.stateA)
 				&& this.stateB.equals(as.stateB)
 				&& this.stateC.equals(as.stateC)
+				&& this.stateCaf.equals(as.stateCaf)
 				&& this.fState.equals(as.fState);
 	}
 
 	@Override
 	public int hashCode() {
 		return Objects.hash(lastKnownDir, searchQuery, 
-				searchResults, stateA, stateB, stateC, fState);
+				searchResults, stateA, stateB, stateC, stateCaf, fState);
 	}
+
 }

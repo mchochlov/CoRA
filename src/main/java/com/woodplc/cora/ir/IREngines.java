@@ -13,5 +13,9 @@ public final class IREngines {
 	public static IREngine newWriteableInstance(Path path) {
 		return new LuceneIREngineWrapper(path, false);
 	}
+
+	public static IREngine existingWriteableInstance(Path path) {
+		return new UpdateableLuceneEngineWrapper(path, false);
+	}
 }
 	

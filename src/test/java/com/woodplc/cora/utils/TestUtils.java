@@ -66,7 +66,7 @@ public final class TestUtils {
 
 	public static ApplicationState emptyApplicationState() {
 		return new ApplicationState(null, null, FXCollections.observableArrayList(), 
-				ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(), 
+				ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(),
 				new Feature());
 	}
 
@@ -81,12 +81,13 @@ public final class TestUtils {
 		ModuleContainer mc1 = ModuleContainer.fromValues(SoftwareSystem.FLEX3.path.toString(), "checksum_1");
 		ModuleContainer mc2 = ModuleContainer.fromValues(SoftwareSystem.DPRFLEX3.path.toString(), "checksum_2");
 		ModuleContainer mc3 = ModuleContainer.fromValues(SoftwareSystem.MAM.path.toString(), "checksum_3");
+		ModuleContainer caf = ModuleContainer.fromValues(SoftwareSystem.CAF.path.toString(), "checksum_4");
 		Feature feature = new Feature();
 		feature.systemASubprograms().addAll("subprogram_a", "subprogram_b", "subprogram_c");
 		feature.systemBSubprograms().addAll("subprogram_d", "subprogram_e");
 		feature.systemCSubprograms().addAll("subprogram_f");
 		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
-				mc1, mc2, mc3, feature);
+				mc1, mc2, mc3, caf, feature);
 	}
 
 	public static FeatureView emptyFeatureView() {

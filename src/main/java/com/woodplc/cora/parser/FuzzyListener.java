@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.Trees;
@@ -24,7 +25,6 @@ import com.woodplc.cora.grammar.FuzzyFortranLexer;
 import com.woodplc.cora.grammar.FuzzyFortranParser.AllocateStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.AssignmentStatementContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.CallStatementContext;
-import com.woodplc.cora.grammar.FuzzyFortranParser.Expression1Context;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IdentifierContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfOneLineContext;
 import com.woodplc.cora.grammar.FuzzyFortranParser.IfStatementContext;
@@ -66,20 +66,43 @@ class FuzzyListener extends FuzzyFortranBaseListener {
 			return;
 		}
 		
-		ModuleVariable mv = new ModuleVariable(ctx.typename().getText());
-		
 		for (TypeStatementNameContext tsnc: ctx.typeStatementNameList().typeStatementName()) {
-			if (!ctx.dimensionStatement().isEmpty()) {
-				collectionTypes.add(tsnc.identifier().getText());
-			}
-			graph.addModuleVariable(currentModule, tsnc.identifier().getText(), mv);
+			ModuleVariable mv = new ModuleVariable(ctx.typename().getText());
+			if (tsnc.identifier() != null && !tsnc.identifier().isEmpty()) {
+				if (!ctx.ALLOCATABLE().isEmpty()) {
+					collectionTypes.add(tsnc.identifier().getText());
+				} else if (!ctx.dimensionStatement().isEmpty()) {
+					setAllocation(mv, ctx.dimensionStatement(0).arrayDeclaratorExtents());
+				}
+				graph.addModuleVariable(currentModule, tsnc.identifier().getText(), mv);
+			} else if (tsnc.arrayDeclarator() != null && !tsnc.arrayDeclarator().isEmpty()) {
+				if (!ctx.ALLOCATABLE().isEmpty()) {
+					collectionTypes.add(tsnc.arrayDeclarator().identifier().getText());
+				} else {
+					setAllocation(mv, tsnc.arrayDeclarator().arrayDeclaratorExtents());
+				}
+				graph.addModuleVariable(currentModule, tsnc.arrayDeclarator().identifier().getText(), mv);
+			} else {
+				throw new IllegalStateException();
+			}	
 		}
 		
 		for (AssignmentStatementContext asc : ctx.typeStatementNameList().assignmentStatement()) {
-			if (!ctx.dimensionStatement().isEmpty()) {
-				collectionTypes.add(asc.expression1(0).getText());
-			}
-			graph.addModuleVariable(currentModule, asc.expression1(0).getText(), mv);
+			//System.out.println(currentModule + " " + asc.getText());
+			ModuleVariable mv = new ModuleVariable(ctx.typename().getText());
+			if (asc.expression1(0).identifier() != null && !asc.expression1(0).identifier().isEmpty()) {
+				if (!ctx.ALLOCATABLE().isEmpty()) {
+					collectionTypes.add(asc.expression1(0).identifier().getText());
+				} else if (asc.expression1(0).exprList1() != null && !asc.expression1(0).exprList1().isEmpty()) {
+					setAllocation(mv, asc.expression1(0).exprList1());
+				} else if (!ctx.dimensionStatement().isEmpty()) {
+					setAllocation(mv, ctx.dimensionStatement(0).arrayDeclaratorExtents());
+				}
+				
+				graph.addModuleVariable(currentModule, asc.expression1(0).identifier().getText(), mv);
+			} else {
+				throw new IllegalStateException();
+			}	
 		}
 	}
 
@@ -103,20 +126,28 @@ class FuzzyListener extends FuzzyFortranBaseListener {
 
 	@Override
 	public void exitAllocateStatement(AllocateStatementContext ctx) {
+	
 		//System.out.println("ALLOCATE EXIT: " +  fname + ctx.getText());
 		//ignore allocation of class members
 		if (ctx.getText().contains("%")) return;
 		String allocatedVariable = ctx.exprList1().expression1(0).identifier().getText();
+	
 		if (collectionTypes.contains(allocatedVariable)) {
 			ModuleVariable mv = graph.getModuleVariable(currentModule, allocatedVariable);
 			if (mv == null) throw new IllegalStateException();
-			mv.setAllocation(ctx.exprList1().expression1(0).exprList1().getText());
-			List<String> allocationParameters = Trees.findAllTokenNodes(ctx.exprList1().expression1(0).exprList1(), FuzzyFortranLexer.ID)
-					.stream()
-					.map(x -> x.getText())
-					.collect(Collectors.toList());
-			mv.setAllocationParameters(allocationParameters);
+			
+			setAllocation(mv, ctx.exprList1().expression1(0).exprList1());
 		}
+	}
+	
+	private void setAllocation(ModuleVariable mv, ParserRuleContext ctx) {
+		if (ctx == null || ctx.isEmpty()) return;
+		mv.setAllocation(ctx.getText());
+		List<String> allocationParameters = Trees.findAllTokenNodes(ctx, FuzzyFortranLexer.ID)
+				.stream()
+				.map(x -> x.getText())
+				.collect(Collectors.toList());
+		mv.setAllocationParameters(allocationParameters);
 	}
 	
 	protected SDGraph getSDGraph() {return graph;}

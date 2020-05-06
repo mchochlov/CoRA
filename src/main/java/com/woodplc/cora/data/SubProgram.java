@@ -79,14 +79,14 @@ public abstract class SubProgram {
 		SubProgram s = (SubProgram) o;
 		return module.equals(s.module) &&
 				subname.equals(s.subname) &&
-				startLine == s.startLine &&
-				endLine == s.endLine &&
+				//startLine == s.startLine &&
+				//endLine == s.endLine &&
 				path.getFileName().equals(s.path.getFileName());
 	}
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(module, subname, startLine, endLine, path.getFileName());
+		return Objects.hash(module, subname, path.getFileName());
 	}
 
 	@Override

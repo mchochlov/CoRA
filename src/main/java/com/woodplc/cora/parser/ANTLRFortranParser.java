@@ -23,6 +23,8 @@ import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
@@ -41,6 +43,8 @@ import com.woodplc.cora.ir.IREngine;
 
 class ANTLRFortranParser implements Parser {
 
+	final Logger logger = LoggerFactory.getLogger(ANTLRFortranParser.class);
+	
 	private final IREngine engine;
 	private static final String MODULE_MARKER = "end module";
 	
@@ -77,6 +81,7 @@ class ANTLRFortranParser implements Parser {
 			try {
 				tree = parser.inputFile();
 			} catch (ParseCancellationException e) {
+				logger.warn("Parse cancellation in {} using FuzzyFotran grammar: trying LL mode.", path.toString());
 				e.printStackTrace();
 				commonTokenStream.seek(0);
 				parser.addErrorListener(ConsoleErrorListener.INSTANCE);
@@ -99,6 +104,7 @@ class ANTLRFortranParser implements Parser {
 			try {
 				tree = parser.inputFile();
 			} catch (ParseCancellationException e) {
+				logger.warn("Parse cancellation in {} using FuzzyFotranFast grammar: trying LL mode.", path.toString());
 				e.printStackTrace();
 				commonTokenStream.seek(0);
 				parser.addErrorListener(ConsoleErrorListener.INSTANCE);

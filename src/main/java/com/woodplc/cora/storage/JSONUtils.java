@@ -202,17 +202,25 @@ public final class JSONUtils {
 	
 	private JSONUtils() {}
 
+	public static ApplicationState stateFromJson(Path path) throws IOException {
+		if (Files.notExists(path)) throw new IllegalStateException();
+		return STATE_TO_GSON.fromJson(Files.newBufferedReader(path), ApplicationState.class);
+	}
+	
 	public static ApplicationState stateFromJson() throws IOException {
-		if (Files.notExists(STATE_JSON_FILENAME)) throw new IllegalStateException();
-		return STATE_TO_GSON.fromJson(Files.newBufferedReader(STATE_JSON_FILENAME), ApplicationState.class);
+		return stateFromJson(STATE_JSON_FILENAME);
 	}
 	
 	public static void stateToJson(ApplicationState state) throws IOException {
+		stateToJson(state, STATE_JSON_FILENAME);
+	}
+	
+	public static void stateToJson(ApplicationState state, Path path) throws IOException {
 		Objects.requireNonNull(state);
 		String jsonString = STATE_TO_GSON.toJson(state);
 
 		Files.createDirectories(Paths.get(Repositories.DATA_FOLDER));
-		Files.write(STATE_JSON_FILENAME, jsonString.getBytes());
+		Files.write(path, jsonString.getBytes());
 	}
 	
 	public static SDGraph graphFromJson(Path entryPath) throws IOException {

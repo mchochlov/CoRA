@@ -74,6 +74,7 @@
                                                       <MenuItem mnemonicParsing="false" onAction="#systemAVarControlledSubprograms" text="%var_control_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#findClonesSystemB" text="%find_clonesb_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#findClonesSystemC" text="%find_clonesc_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#refactorItemSystemA" text="%refactor_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemA" text="%remove_item" />
                                                   </items>
                                                 </ContextMenu>
@@ -101,6 +102,7 @@
                                                    <items>
                                                       <MenuItem mnemonicParsing="false" onAction="#systemBAdjacentSubprograms" text="%adj_sub_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#systemBVarControlledSubprograms" text="%var_control_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#refactorItemSystemB" text="%refactor_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemB" text="%remove_item" />
                                                    </items>
                                                 </ContextMenu>
@@ -128,6 +130,7 @@
                                                    <items>
                                                       <MenuItem mnemonicParsing="false" onAction="#systemCAdjacentSubprograms" text="%adj_sub_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#systemCVarControlledSubprograms" text="%var_control_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#refactorItemSystemC" text="%refactor_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemC" text="%remove_item" />
                                                    </items>
                                                 </ContextMenu>
@@ -160,12 +163,12 @@
                            <children>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_a_lbl">
+                                    <Label minWidth="70.0" text="%system_a_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="60.0">
+                                    <Label fx:id="systemALbl" minWidth="-Infinity" prefWidth="70.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -185,12 +188,12 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_b_lbl">
+                                    <Label minWidth="70.0" text="%system_b_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="60.0">
+                                    <Label fx:id="systemBLbl" minWidth="-Infinity" prefWidth="70.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -210,12 +213,12 @@
                               </HBox>
                               <HBox spacing="10.0">
                                  <children>
-                                    <Label text="%system_c_lbl">
+                                    <Label minWidth="70.0" text="%system_c_lbl">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
                                     </Label>
-                                    <Label fx:id="systemCLbl" minWidth="-Infinity" prefWidth="60.0">
+                                    <Label fx:id="systemCLbl" minWidth="-Infinity" prefWidth="70.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -224,6 +227,31 @@
                                     <Button fx:id="systemCBrowseBtn" mnemonicParsing="false" onAction="#openSystemCBrowseDlg" text="%browse_btn" />
                                     <Button fx:id="systemCParseBtn" mnemonicParsing="false" onAction="#parseSystemC" text="%parse_btn" />
                                     <ProgressBar fx:id="systemCProgressBar" prefWidth="150.0" progress="0.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </ProgressBar>
+                                 </children>
+                                 <padding>
+                                    <Insets left="15.0" right="15.0" />
+                                 </padding>
+                              </HBox>
+                              <HBox layoutX="10.0" layoutY="85.0" spacing="10.0">
+                                 <children>
+                                    <Label minWidth="70.0" text="%caf_lbl">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <Label fx:id="cafLbl" minWidth="-Infinity" prefWidth="70.0">
+                                       <HBox.margin>
+                                          <Insets top="5.0" />
+                                       </HBox.margin>
+                                    </Label>
+                                    <TextField fx:id="cafDirFld" />
+                                    <Button fx:id="cafBrowseBtn" mnemonicParsing="false" onAction="#openCafBrowseDlg" text="%browse_btn" />
+                                    <Button fx:id="cafParseBtn" mnemonicParsing="false" onAction="#parseCaf" text="%parse_btn" />
+                                    <ProgressBar fx:id="cafProgressBar" prefWidth="150.0" progress="0.0">
                                        <HBox.margin>
                                           <Insets top="5.0" />
                                        </HBox.margin>
@@ -295,4 +323,24 @@
          </menus>
       </MenuBar>
    </top>
+   <bottom>
+      <HBox BorderPane.alignment="CENTER">
+         <children>
+            <Label fx:id="statusLabel" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+               <HBox.margin>
+                  <Insets right="5.0" />
+               </HBox.margin>
+            </Label>
+            <HBox prefWidth="200.0" HBox.hgrow="NEVER">
+               <children>
+                  <Label maxWidth="1.7976931348623157E308" text="%ref_jobs" HBox.hgrow="ALWAYS" />
+                  <Label fx:id="jobsNumberLabel" minWidth="20.0" HBox.hgrow="NEVER" />
+               </children>
+            </HBox>
+         </children>
+         <padding>
+            <Insets bottom="15.0" left="15.0" right="15.0" />
+         </padding>
+      </HBox>
+   </bottom>
 </BorderPane>

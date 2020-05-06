@@ -17,7 +17,7 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 	public String formatParameterAllocationErrors(List<String> parameterAllocationErrors) {
 		StringBuilder output =  new StringBuilder();
 		for (String error : parameterAllocationErrors) {
-			output.append("! ").append(error).append("\n").append(typeTab);
+			output.append("! ").append(error).append("\r\n").append(typeTab);
 		}
 		return output.toString();
 	}
@@ -26,15 +26,15 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 	public String formatIntentStatements(List<String> existingIntentStatements) {
 		StringBuilder output =  new StringBuilder();
 		for (String string : existingIntentStatements) {
-			output.append("\n").append(typeTab).append(string);
+			output.append("\r\n").append(typeTab).append(string);
 		}
 		return output.toString();
 	}
 
 	@Override
 	public String formatLocalVariableComment() {
-		return new StringBuilder().append("\n").append(typeTab).append("!Local variables")
-				.append("\n").append(typeTab).toString();
+		return new StringBuilder().append("\r\n").append(typeTab).append("!Local variables")
+				.append("\r\n").append(typeTab).toString();
 	}
 
 	@Override
@@ -44,7 +44,7 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 		initialArgumentListOffset += 1;
 		for (String arg : nonNullValues) {
 			if (initialArgumentListOffset + arg.length() + 2 > ARGUMENT_OFFSET) {			
-				output.append(" &\n\t& ").append(arg).append(", ");
+				output.append(" &\r\n\t& ").append(arg).append(", ");
 				initialArgumentListOffset = 8 + arg.length();
 			} else {
 				output.append(arg).append(", ");	
@@ -64,7 +64,7 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 	@Override
 	public String commentStatement(String text, int position) {
 		String tab = " ".repeat(position);
-		return "! " + text + "\n" + tab;
+		return "! " + text.replaceAll("\r\n", "\r\n!") + "\r\n" + tab;
 	}
 
 	@Override
@@ -72,7 +72,7 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 		String tab = " ".repeat(useStatementOffset);
 		StringBuilder output =  new StringBuilder();
 		for (Map.Entry<String, Collection<String>> entry : entrySet) {
-			output.append("\n").append(tab).append("use ").append(entry.getKey()).append(", only : ")
+			output.append("\r\n").append(tab).append("use ").append(entry.getKey()).append(", only : ")
 			.append(formatVariableList(entry.getValue(), 13 + tab.length() + entry.getKey().length()));
 		}
 		return output.toString();
@@ -82,7 +82,7 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 		StringBuilder output =  new StringBuilder();
 		for (String arg : list) {
 			if (offset + arg.length() + 2 > ARGUMENT_OFFSET) {			
-				output.append(" &\n\t& ").append(arg).append(", ");
+				output.append(" &\r\n\t& ").append(arg).append(", ");
 				offset = 8 + arg.length();
 			} else {
 				output.append(arg).append(", ");	
@@ -99,17 +99,17 @@ final class FreeFormFortranFormatter implements FortranFormatter {
 		String tab = " ".repeat(commonStatementOffset);
 		StringBuilder output =  new StringBuilder();
 		for (Map.Entry<String, OrderedCaseInsensitiveSet<String>> entry : savedCommonStatements.entrySet()) {
-			output.append("\n").append(tab).append("common /").append(entry.getKey()).append("/ ")
+			output.append("\r\n").append(tab).append("common /").append(entry.getKey()).append("/ ")
 			.append(formatVariableList(entry.getValue().allValues(), 10 + tab.length() + entry.getKey().length()));
 			for (String var : entry.getValue().allValues()) {
 				if (!savedTypeStatements.containsKey(var)) {
 					throw new IllegalStateException();
 				}
-				output.append("\n").append(tab).append(savedTypeStatements.get(var));
+				output.append("\r\n").append(tab).append(savedTypeStatements.get(var));
 			}
 		}
 		if (output.length() > 0) {
-			output.append("\n").append(tab);
+			output.append("\r\n").append(tab);
 		}
 		return output.toString();
 	}

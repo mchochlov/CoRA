@@ -19,7 +19,7 @@ import com.woodplc.cora.grammar.Fortran77Parser;
 
 abstract class AbstractFortran77Refactoring {
 	
-	protected static final String NEW_LINE = "\n";
+	protected static final String NEW_LINE = "\r\n";
 
 	protected List<String> parse(Path path, Stream<String> originalSubprogram, ParseTreeListener ptl) {
 		Fortran77Lexer lexer = new Fortran77Lexer(CharStreams.fromString(originalSubprogram.collect(Collectors.joining(NEW_LINE))));

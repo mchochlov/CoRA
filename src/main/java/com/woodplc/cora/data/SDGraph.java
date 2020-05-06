@@ -57,4 +57,6 @@ public interface SDGraph {
 	void addModuleVariable(String moduleName, String variableName, ModuleVariable moduleVariable);
 
 	void addModule(String currentModule);
+
+	void updateSubprograms(Set<SubProgram> subprograms);
 }

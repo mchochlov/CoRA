@@ -7,5 +7,9 @@ public final class Graphs {
 	public static SDGraph newInstance() {
 		return new GuavaBasedSDGraph();
 	}
+
+	public static SDGraph copyOf(SDGraph graph) {
+		return new GuavaBasedSDGraph(graph);
+	}
 	
 }

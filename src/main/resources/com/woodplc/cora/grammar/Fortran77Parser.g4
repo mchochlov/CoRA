@@ -560,7 +560,7 @@ firstIfBlock
    ;
 
 elseIfStatement
-   : (ELSEIF | (ELSE IF)) LPAREN logicalExpression RPAREN THEN (ifName)? wholeStatement +
+   : (ELSEIF | (ELSE IF)) LPAREN expression1 RPAREN THEN (ifName)? wholeStatement +
    ;
 
 elseStatement

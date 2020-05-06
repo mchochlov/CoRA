@@ -50,6 +50,17 @@ public final class GuavaBasedSDGraph implements SDGraph {
 		allModules = new HashSet<>();
 	}
 	
+	public GuavaBasedSDGraph(SDGraph graph) {
+		Objects.requireNonNull(graph);
+		if (!(graph instanceof GuavaBasedSDGraph)) throw new IllegalArgumentException();
+		GuavaBasedSDGraph g = (GuavaBasedSDGraph) graph;
+		moduleVariableMap = TreeBasedTable.create((TreeBasedTable<String, String, ModuleVariable>) g.moduleVariableMap);
+		subprograms = new HashSet<>(g.subprograms);
+		subprogramCallGraph = com.google.common.graph.Graphs.copyOf(g.subprogramCallGraph);
+		variableCallees = SetMultimapBuilder.hashKeys().hashSetValues().build(g.variableCallees);
+		allModules = new HashSet<>(g.allModules);
+	}
+
 	@Override
 	public void addVariablesAndCallees(Set<String> variables, Set<String> callees) {
 		Objects.requireNonNull(variables);
@@ -204,7 +215,10 @@ public final class GuavaBasedSDGraph implements SDGraph {
 					.stream()
 					.filter(s -> s instanceof Program)
 					.findFirst();
-			if (!startNode.isPresent()) throw new ProgramEntryNotFoundException();
+			if (!startNode.isPresent()) {
+				unreferencedSubprograms = ImmutableSet.of();
+				throw new ProgramEntryNotFoundException();
+			}
 
 			Set<String> functions = subprograms.stream()
 					.filter(f -> f instanceof Function)
@@ -309,5 +323,11 @@ public final class GuavaBasedSDGraph implements SDGraph {
 	@Override
 	public void addModule(String currentModule) {
 		this.allModules.add(currentModule);
+	}
+
+	@Override
+	public void updateSubprograms(Set<SubProgram> subprograms) {
+		this.subprograms.removeAll(subprograms);
+		this.subprograms.addAll(subprograms);
 	}
 }
