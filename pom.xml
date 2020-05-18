@@ -11,6 +11,7 @@
 		<antlr.version>4.7.1</antlr.version>
 		<jupiter.version>5.3.1</jupiter.version>
 		<openjfx.version>14</openjfx.version>
+		<gumtree.version>3.0.0-beta1-SNAPSHOT</gumtree.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	
@@ -259,6 +260,30 @@
     		<groupId>commons-io</groupId>
     		<artifactId>commons-io</artifactId>
     		<version>2.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>core</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>client</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.jdt</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.antlr4</artifactId>
+			<version>${gumtree.version}</version>
 		</dependency>
 	</dependencies>
 </project>
