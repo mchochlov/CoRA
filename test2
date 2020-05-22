@@ -1,5 +1,0 @@
-subroutine simple
-  if (one) then
-    return
-  end if
-end subroutine simple
