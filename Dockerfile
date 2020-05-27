@@ -8,4 +8,4 @@ ENTRYPOINT ["java", "-Xms512m", "-Xmx1024m", "--module-path", "lib", "--add-modu
 	"--add-exports", "javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED", \
 	"--add-exports", "javafx.graphics/com.sun.javafx.text=ALL-UNNAMED", \
 	"--add-exports", "javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED", \
-	"-jar", "cora-0.1.9-SNAPSHOT.jar"]
+	"-jar", "cora-0.1.10-SNAPSHOT.jar"]

@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.woodplc</groupId>
 	<artifactId>cora</artifactId>
-	<version>0.1.9-SNAPSHOT</version>
+	<version>0.1.10-SNAPSHOT</version>
 	<name>Code Reunification Application</name>
 
 	<properties>
@@ -11,6 +11,7 @@
 		<antlr.version>4.7.1</antlr.version>
 		<jupiter.version>5.3.1</jupiter.version>
 		<openjfx.version>14</openjfx.version>
+		<gumtree.version>3.0.0-beta1-SNAPSHOT</gumtree.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	
@@ -18,13 +19,13 @@
 		<repository>
 			<id>central-repo</id>
 			<name>Central Repository</name>
-			<url>http://repo.maven.apache.org/maven2</url>
+			<url>https://repo.maven.apache.org/maven2</url>
 		</repository>
 	</repositories>
 	<pluginRepositories>
 		<pluginRepository>
 			<id>central</id>
-			<url>http://repo.maven.apache.org/maven2</url>
+			<url>https://repo.maven.apache.org/maven2</url>
 		</pluginRepository>
 	</pluginRepositories>
 
@@ -259,6 +260,30 @@
     		<groupId>commons-io</groupId>
     		<artifactId>commons-io</artifactId>
     		<version>2.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>core</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>client</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.jdt</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.antlr4</artifactId>
+			<version>${gumtree.version}</version>
 		</dependency>
 	</dependencies>
 </project>
