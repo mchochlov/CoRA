@@ -41,8 +41,8 @@ public final class FortranTreeGenerator extends AbstractAntlr4TreeGenerator {
 		} else {
 			lexer.fixedForm = false;
 		}
-		CommonTokenStream cts = new CommonTokenStream(lexer);
-        parser = new Fortran77ParserV1(cts);
+		tokens = new CommonTokenStream(lexer);
+        parser = new Fortran77ParserV1(tokens);
         return parser.program();
 	}
 
@@ -50,5 +50,7 @@ public final class FortranTreeGenerator extends AbstractAntlr4TreeGenerator {
 	protected String[] getTokenNames() {
 		return lexer.getTokenNames();
 	}
+	
+	public CommonTokenStream getTokenStream() {return this.tokens;}
 
 }
