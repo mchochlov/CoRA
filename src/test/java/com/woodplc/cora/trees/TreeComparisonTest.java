@@ -9,17 +9,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
 import com.github.gumtreediff.matchers.MappingStore;
 import com.github.gumtreediff.matchers.Matcher;
 import com.github.gumtreediff.matchers.Matchers;
-import com.github.gumtreediff.matchers.heuristic.gt.GreedyBottomUpMatcher;
-import com.github.gumtreediff.matchers.heuristic.gt.GreedySubtreeMatcher;
 import com.github.gumtreediff.tree.ITree;
+import com.woodplc.cora.data.OrderedLinkedMap;
+import com.woodplc.cora.trees.algorithms.CloneMergeAlgorithm;
+import com.woodplc.cora.trees.algorithms.MergeAlgorithms;
 import com.woodplc.cora.utils.Utils;
 
 class TreeComparisonTest {
@@ -30,6 +31,7 @@ class TreeComparisonTest {
 	private static final String AB_MAPPING = "ab_mapping.txt";
 	private static final String AC_MAPPING = "ac_mapping.txt";
 	private static final String BC_MAPPING = "bc_mapping.txt";
+	private static final String SUB_MERGED = "set_reynolds_merged.txt";
 
 	@Test
 	void testFortranTreeGenerator() throws IOException, URISyntaxException {
@@ -108,4 +110,24 @@ class TreeComparisonTest {
 		return diff;
 	}
 	
+	
+	@Test
+	void testCloneMergeAlgorithm() throws URISyntaxException, IOException {
+		Path subA = Paths.get(getClass().getResource(SUB_A).toURI());
+		Path subB = Paths.get(getClass().getResource(SUB_B).toURI());
+		Path subC = Paths.get(getClass().getResource(SUB_C).toURI());
+		Stream<String> originalSubprogramA = Utils.readFullLinesFromFile(subA).stream();
+		Stream<String> originalSubprogramB = Utils.readFullLinesFromFile(subB).stream();
+		Stream<String> originalSubprogramC = Utils.readFullLinesFromFile(subC).stream();
+		OrderedLinkedMap<Path, Stream<String>> subs = new OrderedLinkedMap<>();
+		subs.put(subA, originalSubprogramA);
+		subs.put(subB, originalSubprogramB);
+		subs.put(subC, originalSubprogramC);
+		
+		CloneMergeAlgorithm cma = MergeAlgorithms.getTokenSequenceMergeAlgorithm(subs);
+		List<String> mergedSubprogram = cma.merge();
+		//mergedSubprogram.forEach(System.out::println);
+		List<String> correctMerged = Files.readAllLines(Paths.get(getClass().getResource(SUB_MERGED).toURI()));
+		assertTrue(correctMerged.equals(mergedSubprogram));
+	}
 }
