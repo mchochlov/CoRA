@@ -27,6 +27,8 @@ import org.apache.commons.lang3.SystemUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.SetMultimap;
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
 import com.woodplc.cora.data.ApplicationState;
@@ -49,7 +51,6 @@ import com.woodplc.cora.utils.CSVUtils;
 import com.woodplc.cora.utils.Utils;
 
 import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -86,6 +87,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Pair;
 
 public class CoRAMainController {
 	    
@@ -118,8 +120,8 @@ public class CoRAMainController {
 	public static WatchService watchService;
 	private final Map<WatchKey, Path> watchPaths = new HashMap<>();
 	final static Queue<Path> processingQueue = new ConcurrentLinkedQueue<>();
-	
-	private final AtomicInteger refJobCounter = new AtomicInteger();
+		
+	SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().hashSetValues().build();
 	
 	@FXML
 	private Label systemALbl;
@@ -729,6 +731,15 @@ public class CoRAMainController {
     	List<String> selectedItems = new ArrayList<>(subprogramList.getSelectionModel().getSelectedItems());
 		if (selectedItems.isEmpty()) {return;}
 		list.removeAll(selectedItems);
+		for (String item : selectedItems) {
+			Set<Pair<String, String>> clones = cloneGroups.removeAll(new Pair<String, String>(moduleA.getCheckSum(), item));	
+			if (!clones.isEmpty()) {
+				logger.info("Removed clones for subprogram \"{}\"", item);
+				for (Pair<String, String> pair : clones) {
+					logger.info("Removed clone subprogram \"{}\" from module with checksum {}", pair.getValue(), pair.getKey());
+				}				
+			}
+		}
 		//feature.removeRefactoringCases(path, selectedItems);
     }
 	
@@ -837,13 +848,8 @@ public class CoRAMainController {
 		return constructVCController(selectedSubprogram, fSubprograms, module);
 		case CLONES_FXML:
 		return new ClonesController(
-				selectedSubprogram,
-				fSubprograms,
-				moduleA.getModule().getEngine(),
-				module.getModule().getEngine(),
-				moduleA.getPath().getFileName().toString(),
-				module.getPath().getFileName().toString(),
-				feature);
+				selectedSubprogram,	fSubprograms,
+				moduleA, module, cloneGroups);
 		case CODEVIEW_FXML:
 		return constructCVController(selectedSubprogram, fSubprograms, module);
 		default:
