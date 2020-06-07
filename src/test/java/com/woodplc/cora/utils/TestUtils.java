@@ -11,19 +11,22 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import com.woodplc.cora.data.ApplicationState;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.SetMultimap;
 import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
+import com.woodplc.cora.gui.controllers.CoRAMainController;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.util.Pair;
 
 public final class TestUtils {
 
@@ -64,13 +67,7 @@ public final class TestUtils {
 	    }
 	}
 
-	public static ApplicationState emptyApplicationState() {
-		return new ApplicationState(null, null, FXCollections.observableArrayList(), 
-				ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(),
-				new Feature());
-	}
-
-	public static ApplicationState fullyInitializedApplicationState() {
+	public static CoRAMainController fullyInitializedMainController() {
 		File lastKnownDir = new File(SoftwareSystem.TEST.path.toString());
 		String searchQuery = "searchQuery";
 		ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList(
@@ -86,8 +83,13 @@ public final class TestUtils {
 		feature.systemASubprograms().addAll("subprogram_a", "subprogram_b", "subprogram_c");
 		feature.systemBSubprograms().addAll("subprogram_d", "subprogram_e");
 		feature.systemCSubprograms().addAll("subprogram_f");
-		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
-				mc1, mc2, mc3, caf, feature);
+		SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().hashSetValues().build();
+		Pair<String, String> pair = new Pair<>("aaa", "sub1");
+		cloneGroups.put(pair, new Pair<String, String>("bbb", "sub2"));
+		cloneGroups.put(pair, new Pair<String, String>("ccc", "sub3"));
+		
+		return CoRAMainController.fromValues(lastKnownDir, searchQuery, searchResults, 
+				mc1, mc2, mc3, caf, feature, cloneGroups);
 	}
 
 	public static FeatureView emptyFeatureView() {

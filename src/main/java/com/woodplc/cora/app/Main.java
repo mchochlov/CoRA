@@ -58,7 +58,7 @@ public class Main extends Application {
 						ButtonType.YES, ButtonType.NO);
 				Optional<ButtonType> result = alert.showAndWait();
 				if (result.isPresent() && result.get() == ButtonType.YES) {
-					mainController = new CoRAMainController(JSONUtils.stateFromJson());
+					mainController = JSONUtils.stateFromJson();
 				} 
 			}
 			if (mainController == null) mainController = new CoRAMainController();
@@ -94,7 +94,7 @@ public class Main extends Application {
 		Alert alert = new Alert(AlertType.NONE, Main.getResources().getString("sync_alert"));
 		alert.show();
 		Repositories.getInstance().closeAndSync();
-		if (mainController != null) JSONUtils.stateToJson(mainController.getApplicationState());
+		if (mainController != null) JSONUtils.stateToJson(mainController);
 		alert.close();
 	}
 	

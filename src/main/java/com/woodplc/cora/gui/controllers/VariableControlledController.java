@@ -5,8 +5,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
-import com.woodplc.cora.data.Feature;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -19,8 +17,6 @@ import javafx.scene.control.TreeView;
 class VariableControlledController extends Controller {
 
 	private final Map<String, Set<String>> variables;
-	private final String path;
-	private final Feature feature;
 
 	@FXML
     private Label varLbl;
@@ -28,12 +24,10 @@ class VariableControlledController extends Controller {
 	@FXML
     private TreeView<String> varTreeView;
 	
-	VariableControlledController(String subname, ObservableList<String> systemSubprograms, Map<String, Set<String>> variables, String path, Feature feature) {
+	VariableControlledController(String subname, ObservableList<String> systemSubprograms, Map<String, Set<String>> variables) {
 		super(subname, systemSubprograms);
 			
 		this.variables = Objects.requireNonNull(variables);
-		this.path = Objects.requireNonNull(path);
-		this.feature = Objects.requireNonNull(feature);
 	}
 
 	@FXML 
@@ -68,6 +62,5 @@ class VariableControlledController extends Controller {
 				this.systemSubprograms.add(item.getValue());
 			}
 		}
-		feature.addRefactoringCasesFromVar(this.path, selectedItems);
     }
 }

@@ -4,8 +4,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
+import com.google.gson.annotations.Expose;
+
 public final class ModuleContainer {
+	@Expose
 	private Path path;
+	@Expose
 	private String checkSum;
 	private ImmutableModule module;
 	
@@ -52,5 +56,20 @@ public final class ModuleContainer {
 		String old = this.checkSum;
 		this.checkSum = checkSum;
 		return old;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(path, checkSum, module);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (!(obj instanceof ModuleContainer)) return false;
+		ModuleContainer other = (ModuleContainer) obj;
+		return (this.path == other.path || this.path.equals(other.path)) &&
+				(this.checkSum == other.checkSum || this.checkSum.equals(other.checkSum)) &&
+				(this.module == other.module || this.module.equals(other.module));
 	}	
 }

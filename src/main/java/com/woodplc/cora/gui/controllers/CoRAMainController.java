@@ -29,9 +29,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.SetMultimap;
+import com.google.gson.annotations.Expose;
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.app.Main.Resource;
-import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.ImmutableModule;
@@ -96,7 +96,9 @@ public class CoRAMainController {
 	private static final double DOUBLE_ZERO = 0;
 	private final DirectoryChooser dirChooser = new DirectoryChooser();
 	private final FileChooser exportChooser = new FileChooser();
+	@Expose
 	private String lastSearchQuery = null;
+	@Expose
 	private File lastKnownDir = null;
 	private final Alert graphNotFoundAlert = new Alert(AlertType.ERROR, Main.getResources().getString("graph_not_found"));
 	private final Alert multipleSelectionAlert = new Alert(AlertType.ERROR, Main.getResources().getString("multiselect"));
@@ -107,20 +109,27 @@ public class CoRAMainController {
 	private final Alert aboutAlert = new Alert(AlertType.INFORMATION, Main.getResources().getString("cora_about"));
 	private final Alert dirChanged = new Alert(AlertType.INFORMATION);
 	
+	@Expose
 	private final ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList();
-	private final FilteredList<SearchEntryView> filteredSearchResults = new FilteredList<>(searchResults);
+	private FilteredList<SearchEntryView> filteredSearchResults;
 	
+	@Expose
 	private ModuleContainer moduleA = ModuleContainer.empty();
+	@Expose
 	private ModuleContainer moduleB = ModuleContainer.empty();
+	@Expose
 	private ModuleContainer moduleC = ModuleContainer.empty();
+	@Expose
 	private ModuleContainer cafModule = ModuleContainer.empty();
 	
+	@Expose
 	private Feature feature = new Feature();
 	
 	public static WatchService watchService;
 	private final Map<WatchKey, Path> watchPaths = new HashMap<>();
 	final static Queue<Path> processingQueue = new ConcurrentLinkedQueue<>();
-		
+	
+	@Expose
 	SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().hashSetValues().build();
 	
 	@FXML
@@ -256,23 +265,31 @@ public class CoRAMainController {
 	private enum ExportType{JSON, CSV};
 
 	public CoRAMainController() {}
+	
+	public CoRAMainController(File lastKnownDir, String searchQuery, ObservableList<SearchEntryView> searchResults,
+			ModuleContainer mc1, ModuleContainer mc2, ModuleContainer mc3, ModuleContainer caf, Feature feature, SetMultimap<Pair<String,String>,Pair<String,String>> cloneGroups2) {
+		this.lastKnownDir = lastKnownDir;
+		this.lastSearchQuery = searchQuery;
+		this.searchResults.addAll(searchResults);
+		this.moduleA = mc1;
+		this.moduleB = mc2;
+		this.moduleC = mc3;
+		this.cafModule = caf;
+		this.feature = feature;
+		this.cloneGroups.putAll(cloneGroups);
+	}
 
-	public CoRAMainController(ApplicationState state) {
-		Objects.requireNonNull(state);
-		this.lastKnownDir = state.getLastKnownDir() == null ? null : new File(state.getLastKnownDir());
-		this.lastSearchQuery = state.getSearchQuery();
-		this.searchResults.addAll(state.getSearchResults());
-		this.moduleA = state.getModuleA();
-		this.moduleB = state.getModuleB();
-		this.moduleC = state.getModuleC();
-		this.cafModule = state.getCafModule();
-		this.feature = state.getFeature();
-		filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
+	public static CoRAMainController fromValues(File lastKnownDir, String searchQuery,
+			ObservableList<SearchEntryView> searchResults, ModuleContainer mc1, ModuleContainer mc2,
+			ModuleContainer mc3, ModuleContainer caf, Feature feature, SetMultimap<Pair<String,String>,Pair<String,String>> cloneGroups) {
+		return new CoRAMainController(lastKnownDir, searchQuery, searchResults, mc1, mc2, mc3, caf, feature, cloneGroups);
 	}
 
 	@FXML
 	void initialize() {     
-
+		
+		filteredSearchResults = new FilteredList<>(searchResults);
+		filteredSearchResults.setPredicate(r -> !feature.systemASubprograms().contains(r.getName()));
 		jobsNumberLabel.textProperty().bind(counter.asString());
 		
 		try {
@@ -454,7 +471,6 @@ public class CoRAMainController {
 		drClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("drName"));
 		plClmnName.setCellValueFactory(new PropertyValueFactory<RefactoringCaseView, String>("plName"));
 		refactoringCaseTbl.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-		refactoringCaseTbl.setItems(feature.getRefactoringCaseList());
 
 	}
 	
@@ -628,6 +644,7 @@ public class CoRAMainController {
 		String query = searchTxtFld.getText();
 		if (query == null || query.isEmpty()) { return;}
 		
+		lastSearchQuery = query;
 		if (moduleA.getModule() == null) {
 			graphNotFoundAlert.showAndWait();
 			return;
@@ -684,7 +701,6 @@ public class CoRAMainController {
 				.map(SearchEntryView::getName)
 				.collect(Collectors.toList());
 		feature.systemASubprograms().addAll(items);
-		//feature.addRefactoringCasesFromSearch(moduleA.getPath().getFileName().toString(), items);
 	}
 
 	@FXML
@@ -740,7 +756,6 @@ public class CoRAMainController {
 				}				
 			}
 		}
-		//feature.removeRefactoringCases(path, selectedItems);
     }
 	
 	private void loadStage(Resource resource, String title, 
@@ -884,7 +899,7 @@ public class CoRAMainController {
 				.map(s -> new CallDependencyView(module.getModule().getGraph().getFanIn(s), s))
 				.collect(Collectors.toCollection(FXCollections::observableArrayList));
 		
-		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees, module.getPath().getFileName().toString(), feature);
+		return new AdjacentSubprogramsController(selectedSubprogram, fSubprograms, callers, callees);
 	}
 	
 	private VariableControlledController constructVCController(String selectedSubprogram,
@@ -903,7 +918,7 @@ public class CoRAMainController {
 			.sorted((x, y) -> Integer.compare(x.getValue().size(), y.getValue().size()))
 			.collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue(), (x, y) -> x, LinkedHashMap::new));
 		
-		return new VariableControlledController(selectedSubprogram, fSubprograms, variables, module.getPath().getFileName().toString(), feature);
+		return new VariableControlledController(selectedSubprogram, fSubprograms, variables);
 	}
 	
 	@FXML
@@ -1213,12 +1228,6 @@ public class CoRAMainController {
 		
 	}
 
-	public ApplicationState getApplicationState() {
-		String searchQuery = searchTxtFld == null ? null : searchTxtFld.getText();
-		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
-				moduleA, moduleB, moduleC, cafModule, feature);
-	}
-	
 	private static class RWARefactoringTask extends Task<List<String>> {
 		
 		final Logger logger = LoggerFactory.getLogger(RWARefactoringTask.class);
@@ -1317,5 +1326,20 @@ public class CoRAMainController {
 		}
 
 		
+	}
+	
+	public boolean equalsExposedFields(CoRAMainController cmc) {
+		if (this == cmc) {
+			return true;
+		}
+		return (this.lastSearchQuery == cmc.lastSearchQuery || this.lastSearchQuery.equals(cmc.lastSearchQuery)) &&
+				(this.lastKnownDir == cmc.lastKnownDir || this.lastKnownDir.equals(cmc.lastKnownDir)) &&
+				this.searchResults.equals(cmc.searchResults) &&
+				this.moduleA.equals(cmc.moduleA) &&
+				this.moduleB.equals(cmc.moduleB) &&
+				this.moduleC.equals(cmc.moduleC) &&
+				this.cafModule.equals(cmc.cafModule) &&
+				this.feature.equals(cmc.feature) &&
+				this.cloneGroups.equals(cmc.cloneGroups);
 	}
 }
