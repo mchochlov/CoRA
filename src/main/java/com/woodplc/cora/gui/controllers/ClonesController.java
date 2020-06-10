@@ -6,8 +6,10 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.SetMultimap;
 import com.woodplc.cora.app.Main;
 import com.woodplc.cora.data.Feature;
+import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.ProgramEntryNotFoundException;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.ir.IREngine;
@@ -26,26 +28,23 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.Pair;
 
 class ClonesController extends Controller {
 
 	private final ObservableList<SearchEntryView> clones = FXCollections.observableArrayList();
-	private final IREngine engineA;
-	private final IREngine engineOther;
+	private final ModuleContainer moduleA;
+	private final ModuleContainer moduleOther;
 	private final Alert illegalStateAlert = new Alert(AlertType.ERROR, Main.getResources().getString("subprogram_not_found"));
-	private final String pathA;
-	private final String path;
-	private final Feature feature;
+	private final SetMultimap<Pair<String,String>,Pair<String,String>> cloneGroups;
 	
-	ClonesController(String subname, ObservableList<String> systemSubprograms, IREngine engineA, IREngine engineOther, 
-			String pathA, String path, Feature feature) {
+	ClonesController(String subname, ObservableList<String> systemSubprograms, ModuleContainer moduleA, ModuleContainer moduleOther, 
+			SetMultimap<Pair<String,String>,Pair<String,String>> cloneGroups) {
 		super(subname, systemSubprograms);
 		
-		this.engineA = Objects.requireNonNull(engineA);
-		this.engineOther = Objects.requireNonNull(engineOther);
-		this.pathA = Objects.requireNonNull(pathA);
-		this.path = Objects.requireNonNull(path);
-		this.feature = Objects.requireNonNull(feature);
+		this.moduleA = Objects.requireNonNull(moduleA);
+		this.moduleOther = Objects.requireNonNull(moduleOther);
+		this.cloneGroups = cloneGroups;
 	}
 
 	@FXML
@@ -83,7 +82,7 @@ class ClonesController extends Controller {
 		searchBtn.setDisable(true);
 		clones.clear();
 
-		FindClonesTask sTask = new FindClonesTask(subname, query, engineA, engineOther);
+		FindClonesTask sTask = new FindClonesTask(subname, query, moduleA.getModule().getEngine(), moduleOther.getModule().getEngine());
 		sTask.setOnSucceeded((e) -> {
 			sTask.getValue().removeIf(x -> systemSubprograms.contains(x.getName()));
 			clones.addAll(sTask.getValue());
@@ -110,6 +109,10 @@ class ClonesController extends Controller {
 				.map(SearchEntryView::getName)
 				.collect(Collectors.toSet());
 		systemSubprograms.addAll(clones);
+		for (String clone : clones) {
+			cloneGroups.put(new Pair<String, String>(moduleA.getCheckSum(), subname), 
+					new Pair<String, String>(moduleOther.getCheckSum(), clone));
+		}
 		this.clones.removeAll(selectedClones);
 		//feature.addRefactoringCasesFromClones(pathA, path, subname, clones);
 	}
