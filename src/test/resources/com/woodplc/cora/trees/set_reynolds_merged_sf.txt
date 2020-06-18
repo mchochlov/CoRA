@@ -34,7 +34,7 @@
  
  
  
->><<INS from 1: 
+ >><<INS from 1: 
 
 
 
@@ -48,7 +48,7 @@
  
  
 
->>implicit none
+ >>implicit none
   !*--set_reynolds_control2211<<INS from 0: 
  
  
@@ -58,40 +58,40 @@
 >>  <<INS from 2: 
  
  
->><<INS from 1: 
+ >><<INS from 1: 
  
  
  
  
  
  integer , intent ( in ) :: int 
->>integer, intent(in) :: istatc
+ >>integer, intent(in) :: istatc
   integer, intent(in) :: ndimwv
   integer, intent(in) :: nodyn
   integer, intent(inout) :: nperiod
   <<INS from 0: integer , intent ( in ) :: num_int 
 >>  integer, intent(in) :: numel
   integer, intent(out) :: nwvpass
-  <<INS from 2: real ( 8 )>><<INS from 1: , intent ( in ) :: pi 
->>real(8), intent(in) :: time
+  <<INS from 2: real ( 8 ) >><<INS from 1: , intent ( in ) :: pi 
+ >>real(8), intent(in) :: time
   real(8), intent(in) :: tramp
   real(8), intent(in) :: tstart
   <<INS from 2: integer , intent ( in ) , dimension ( numel , 2 ) :: active_elem 
->>real(8), <<INS from 0: intent ( in ) ,>> dimension(ndimwv) :: omega
+ >>real(8), <<INS from 0: intent ( in ) ,>> dimension(ndimwv) :: omega
   real(8), dimension(<<UPD from 2: num_int to int>>, numel) :: vrelc
   real(8), dimension(5) :: vrelcon
   real(8), dimension(<<UPD from 2: num_int to int>>, numel) :: vrelp
   <<INS from 0: 
 >>  <<INS from 2: 
->><<INS from 1: 
->>intent(in) <<INS from 1: omega ,>>vrelc, vrelp
+ >><<INS from 1: 
+ >>intent(in) <<INS from 1: omega , >>vrelc, vrelp
   intent(inout) vrelcon
   !local variables<<INS from 0: 
 >>  <<INS from 2: 
->>real(8) :: dabs
+ >>real(8) :: dabs
   <<INS from 2: real :: float 
->><<INS from 1: 
->>integer :: i
+ >><<INS from 1: 
+ >>integer :: i
   integer :: j
   integer :: k
   real(8) :: wavperd
@@ -102,12 +102,12 @@
 
 >>  <<INS from 2: 
  
->><<INS from 1: 
+ >><<INS from 1: 
  
  
  
 
->>if (nodyn <<UPD from 2: == to .eq.>> <<UPD from 2: 1 to 0>>) then                          ! static analysis
+ >>if (nodyn <<UPD from 2: == to .eq.>> <<UPD from 2: 1 to 0>>) then                          ! static analysis
     nwvpass = 0
   else if (nodyn <<UPD from 2: == to .eq.>> <<UPD from 2: 0 to 1>>.and.istatc <<UPD from 2: == to .eq.>> 1) then     ! quasi-static analysis
     nwvpass = 0
@@ -115,7 +115,7 @@
     <<INS from 1: 
  if ( ndimwv > 0 ) then 
  
->>wavperd = 0.0d0 
+ >>wavperd = 0.0d0 
     if (omega(1) > 1.0d-8) wavperd = (2.0d0 * pi) / omega(1)<<UPD from 1: 
  to 
 
@@ -123,8 +123,8 @@
 
  to 
 >>    <<INS from 2: 
->><<INS from 1: 
->>if (time > (tstart + tramp + (nperiod * wavperd))) then
+ >><<INS from 1: 
+ >>if (time > (tstart + tramp + (nperiod * wavperd))) then
       nwvpass = 0
       nperiod = nperiod + 1
       do i = 1,4                                ! swap convergence
@@ -137,7 +137,7 @@
         <<INS from 2: 
  if ( active_elem ( j , 2 ) /= 1 ) cycle 
 
->>do k=1,<<UPD from 2: num_int to int>>                              ! convergence check
+ >>do k=1,<<UPD from 2: num_int to int>>                              ! convergence check
           if (dabs(vrelc(k,j)) > 1.d-20) then
             vrelcon(1) = vrelcon(1) + dabs((vrelc(k,j) - vrelp(k,j)) / vrelc(k,j))
           end if
@@ -149,11 +149,11 @@
   <<INS from 1: else 
  nwvpass = 0 
  end if 
->>end if<<UPD from 2: 
+ >>end if<<UPD from 2: 
 
  to 
 >>end subroutine set_reynolds_control<<INS from 0: end subroutine set_reynolds_control <EOF>>><<INS from 2: 
  
- <EOF>>><<INS from 1: return 
+ <EOF> >><<INS from 1: return 
 
- end subroutine set_reynolds <EOF>>>
+ end subroutine set_reynolds <EOF> >>

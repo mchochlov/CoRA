@@ -66,7 +66,7 @@ C
 C                                                  ! convergence check
 C.......... Check is this an active element
 C
-            IF(ACTIVE_ELEM(J,2) /= 1)CYCLE
+            IF(ACTIVE_ELEM(J, 2) /= 1)CYCLE
 
             DO K=1,INT                              
               IF (DABS(VRELC(K,J)) > 1.D-20) THEN
