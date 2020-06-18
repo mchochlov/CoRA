@@ -1350,4 +1350,10 @@ public class CoRAMainController {
 				this.feature.equals(cmc.feature) &&
 				this.cloneGroups.equals(cmc.cloneGroups);
 	}
+	
+	@FXML
+    void refactorCloneClass(ActionEvent event) {
+
+    }
+
 }
