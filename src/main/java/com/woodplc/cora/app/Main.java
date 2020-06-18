@@ -34,6 +34,7 @@ public class Main extends Application {
 		VAR_FXML("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml"),
 		CLONES_FXML("/com/woodplc/cora/gui/fxml/Clones.fxml"),
 		CODEVIEW_FXML("/com/woodplc/cora/gui/fxml/CodeViewer.fxml"),
+		CLONECLASS_FXML("/com/woodplc/cora/gui/fxml/CloneClass.fxml"),
 		FORTRAN_KEYWORDS("fortran_keywords.txt");
 		
 		private final String path;
