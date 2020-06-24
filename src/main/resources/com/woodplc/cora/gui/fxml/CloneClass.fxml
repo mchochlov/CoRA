@@ -8,14 +8,15 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
-<?import org.fxmisc.richtext.StyleClassedTextArea?>
+<?import org.fxmisc.flowless.VirtualizedScrollPane?>
+<?import org.fxmisc.richtext.CodeArea?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1">
    <left>
-      <VBox prefHeight="200.0" prefWidth="150.0" spacing="5.0" BorderPane.alignment="CENTER">
+      <VBox prefHeight="200.0" prefWidth="250.0" spacing="5.0" BorderPane.alignment="CENTER">
          <children>
             <Label text="%cc_clones" />
-            <ListView fx:id="ccListview" prefHeight="200.0" prefWidth="200.0" />
+            <ListView fx:id="ccListview" prefHeight="200.0" prefWidth="250.0" />
             <Label text="%refactoring_opt" />
             <CheckBox fx:id="useSFcheckBox" mnemonicParsing="false" text="%cc_sf_checkbox" />
          </children>
@@ -28,7 +29,11 @@
       <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0" BorderPane.alignment="CENTER">
          <children>
             <Label text="%merge_view" />
-            <StyleClassedTextArea fx:id="codeMergeArea" VBox.vgrow="ALWAYS" />
+            <VirtualizedScrollPane VBox.vgrow="ALWAYS">
+               <content>
+                  <CodeArea fx:id="codeMergeArea" />
+               </content>
+            </VirtualizedScrollPane>
          </children>
          <padding>
             <Insets left="5.0" />
@@ -39,7 +44,7 @@
       <HBox alignment="CENTER_LEFT" prefHeight="0.0" prefWidth="570.0" spacing="5.0" BorderPane.alignment="CENTER">
          <children>
             <Button fx:id="mergeBtn" mnemonicParsing="false" onAction="#mergeClones" text="%merge_btn" />
-            <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
+            <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0" spacing="5.0" HBox.hgrow="ALWAYS">
                <children>
                   <Label fx:id="mergeProgressLbl" />
                </children>

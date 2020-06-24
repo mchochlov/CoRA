@@ -402,26 +402,11 @@ public class CoRAMainController {
 		initializeModule(cafModule, cafDirFld, cafLbl, null, cafParseBtn, cafProgressBar);
 		
 		searchTxtFld.setText(lastSearchQuery);
-		systemASubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleA);
-		     }
-		 });
+		systemASubprogramList.setCellFactory(e -> new SubprogramCell(moduleA));
 		
-		systemBSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleB);
-		     }
-		 });
+		systemBSubprogramList.setCellFactory(e -> new SubprogramCell(moduleB));
 
-		systemCSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleC);
-		     }
-		 });
+		systemCSubprogramList.setCellFactory(e -> new SubprogramCell(moduleC));
 		
 		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
 			while(x.next()) {
@@ -1383,7 +1368,7 @@ public class CoRAMainController {
 				}
 						
 				if (value.getKey().equals(oldCheckSum)) {
-					value = new Pair<>(checkSum, key.getValue());
+					value = new Pair<>(checkSum, value.getValue());
 					updated = true;
 				}
 				
@@ -1446,13 +1431,31 @@ public class CoRAMainController {
 		
 		List<Pair<String, String>> value = new ArrayList<>(cloneGroups.get(key));
 		value.add(0, key);
+		List<SubProgram> subprograms = new ArrayList<>();
+		for (Pair<String, String> pair : value) {
+			Optional<SubProgram> subprogram = null;
+			if (moduleA.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleA, pair.getValue());
+			} else if (moduleB.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleB, pair.getValue());
+			} else if (moduleC.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleC, pair.getValue());				
+			} else  {
+				throw new IllegalStateException();
+			}
+			if (subprogram.isEmpty()) {
+				throw new IllegalStateException();
+			}
+			subprograms.add(subprogram.get());
+		}
 		FXMLLoader loader = new FXMLLoader(getClass().getResource(Resource.CLONECLASS_FXML.path()), Main.getResources());
-		CloneClassController controller = new CloneClassController(value);
+		CloneClassController controller = new CloneClassController(value, subprograms);
 		
 		loader.setController(controller);
 		Pane root = (Pane) loader.load();
 		Scene scene = new Scene(root);
 		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
+		scene.getStylesheets().add(getClass().getResource(Resource.CODE_CSS.path()).toExternalForm());
 		
 		Stage stage = new Stage();
 		stage.setScene(scene);
@@ -1462,7 +1465,15 @@ public class CoRAMainController {
 		} else {
 			stage.initModality(Modality.APPLICATION_MODAL);
 		}
+		stage.setOnCloseRequest(e -> controller.deinit());
 		stage.show();
     }
+	
+	private Optional<SubProgram> findSubprogram(ModuleContainer module, String subName) {
+		return module.getModule().getGraph().subprograms()
+				.stream()
+				.filter(s -> s.name().equalsIgnoreCase(subName))
+				.findFirst();
+	}
 
 }

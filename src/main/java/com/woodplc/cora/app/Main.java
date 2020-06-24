@@ -28,6 +28,7 @@ public class Main extends Application {
 
 	public enum Resource {
 		CSS("/com/woodplc/cora/gui/css/application.css"),
+		CODE_CSS("/com/woodplc/cora/gui/css/code.css"),
 		TEXT("com.woodplc.cora.gui.fxml.CoraResources"),
 		MAIN_FXML("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"),
 		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml"),
