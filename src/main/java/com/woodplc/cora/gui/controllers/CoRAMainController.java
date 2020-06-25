@@ -10,9 +10,11 @@ import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
@@ -130,7 +132,7 @@ public class CoRAMainController {
 	final static Queue<Path> processingQueue = new ConcurrentLinkedQueue<>();
 	
 	@Expose
-	SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().hashSetValues().build();
+	SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().linkedHashSetValues().build();
 	
 	@FXML
 	private Label systemALbl;
@@ -400,26 +402,11 @@ public class CoRAMainController {
 		initializeModule(cafModule, cafDirFld, cafLbl, null, cafParseBtn, cafProgressBar);
 		
 		searchTxtFld.setText(lastSearchQuery);
-		systemASubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleA);
-		     }
-		 });
+		systemASubprogramList.setCellFactory(e -> new SubprogramCell(moduleA));
 		
-		systemBSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleB);
-		     }
-		 });
+		systemBSubprogramList.setCellFactory(e -> new SubprogramCell(moduleB));
 
-		systemCSubprogramList.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-		     @Override 
-		     public ListCell<String> call(ListView<String> list) {
-		         return new SubprogramCell(moduleC);
-		     }
-		 });
+		systemCSubprogramList.setCellFactory(e -> new SubprogramCell(moduleC));
 		
 		feature.systemASubprograms().addListener((ListChangeListener.Change<? extends String> x) -> {
 			while(x.next()) {
@@ -599,6 +586,7 @@ public class CoRAMainController {
 					String currentCheckSum = Repositories.checkSumForPath(path);
 					if (loadedCheckSum == null || !loadedCheckSum.equals(currentCheckSum)) {
 						module.setCheckSum(currentCheckSum);	
+						updateCloneGroups(loadedCheckSum, currentCheckSum);
 					}
 					return Repositories.getInstance().retrieve(module.getCheckSum(), path, this::updateProgress);
 				}
@@ -632,6 +620,35 @@ public class CoRAMainController {
 					progressBar.progressProperty().set(Double.MAX_VALUE);
 					progressBar.setStyle(color.style);
 				}			
+				
+				private void updateCloneGroups(String oldCheckSum, String checkSum) {
+					SetMultimap<Pair<String, String>, Pair<String, String>> newGroup = SetMultimapBuilder.hashKeys().linkedHashSetValues().build();
+					//rewrite keys and values
+					for (Iterator<Entry<Pair<String, String>, Pair<String, String>>> iterator = cloneGroups.entries().iterator(); iterator.hasNext();) {
+						Entry<Pair<String, String>, Pair<String, String>> entry = (Entry<Pair<String, String>, Pair<String, String>>) iterator.next();
+						Pair<String, String> key = entry.getKey();
+						Pair<String, String> value = entry.getValue();
+						boolean updated = false;
+						if (key.getKey().equals(oldCheckSum)) {
+							key = new Pair<>(checkSum, key.getValue());
+							updated = true;
+						}
+								
+						if (value.getKey().equals(oldCheckSum)) {
+							value = new Pair<>(checkSum, key.getValue());
+							updated = true;
+						}
+						
+						if (updated) {
+							iterator.remove();
+							newGroup.put(key, value);
+						}
+					}
+					if (!newGroup.isEmpty()) {
+						cloneGroups.putAll(newGroup);				
+					}
+					
+				}
 			};
 
 			progressBar.progressProperty().bind(pTask.progressProperty());
@@ -1132,7 +1149,7 @@ public class CoRAMainController {
 			return;
 		}
 		
-		RWARefactoringTask rTask = new RWARefactoringTask(selectedItems.get(0), module, cafModule.getModule().getGraph());
+		RWARefactoringTask rTask = new RWARefactoringTask(selectedItems.get(0), module, cafModule.getModule().getGraph(), cloneGroups);
 		
 		statusLabel.textProperty().bind(rTask.messageProperty());
 		
@@ -1243,11 +1260,14 @@ public class CoRAMainController {
 		private final String subName;
 		private final ModuleContainer module;
 		private final SDGraph cafGraph;
+		private final SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups;
 		
-		public RWARefactoringTask(String subName, ModuleContainer module, SDGraph cafGraph) {
+		public RWARefactoringTask(String subName, ModuleContainer module, SDGraph cafGraph, 
+				SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups) {
 			this.subName = subName;
 			this.module = module;
 			this.cafGraph = cafGraph;
+			this.cloneGroups = cloneGroups;
 		}
 
 		@Override
@@ -1295,7 +1315,7 @@ public class CoRAMainController {
 			logger.info("Updating IR and SDGraph for {}", subName);
 			
 			String oldCheckSum = module.updateCheckSum(Repositories.checkSumForPath(module.getPath()));	
-			
+			updateCloneGroups(oldCheckSum, module.getCheckSum());
 			module.setModule(Repositories.getInstance().updateOrRetrieve(module, oldCheckSum, subprogram.get().path()));
 			
 			updateMessage("Refactoring callers of " + subName);
@@ -1325,12 +1345,42 @@ public class CoRAMainController {
 				updateMessage("Updating IR and SDGraph for " + caller.name());
 				logger.info("Updating IR and SDGraph for {}", caller.name());
 				oldCheckSum = module.updateCheckSum(Repositories.checkSumForPath(module.getPath()));	
+				updateCloneGroups(oldCheckSum, module.getCheckSum());
 				module.setModule(Repositories.getInstance().updateOrRetrieve(module, oldCheckSum, caller.path()));
 			}
 						
 			updateMessage("Refactoring completed for " + subName);
 			logger.info("Refactoring completed for " + subName);
 			return refactoringErrors;
+		}
+
+		private void updateCloneGroups(String oldCheckSum, String checkSum) {
+			SetMultimap<Pair<String, String>, Pair<String, String>> newGroup = SetMultimapBuilder.hashKeys().linkedHashSetValues().build();
+			//rewrite keys and values
+			for (Iterator<Entry<Pair<String, String>, Pair<String, String>>> iterator = cloneGroups.entries().iterator(); iterator.hasNext();) {
+				Entry<Pair<String, String>, Pair<String, String>> entry = (Entry<Pair<String, String>, Pair<String, String>>) iterator.next();
+				Pair<String, String> key = entry.getKey();
+				Pair<String, String> value = entry.getValue();
+				boolean updated = false;
+				if (key.getKey().equals(oldCheckSum)) {
+					key = new Pair<>(checkSum, key.getValue());
+					updated = true;
+				}
+						
+				if (value.getKey().equals(oldCheckSum)) {
+					value = new Pair<>(checkSum, value.getValue());
+					updated = true;
+				}
+				
+				if (updated) {
+					iterator.remove();
+					newGroup.put(key, value);
+				}
+			}
+			if (!newGroup.isEmpty()) {
+				cloneGroups.putAll(newGroup);				
+			}
+			
 		}
 
 		
@@ -1350,4 +1400,80 @@ public class CoRAMainController {
 				this.feature.equals(cmc.feature) &&
 				this.cloneGroups.equals(cmc.cloneGroups);
 	}
+	
+	@FXML
+    void refactorCloneClass(ActionEvent event) throws IOException {
+		List<String> selectedItems = new ArrayList<>(systemASubprogramList.getSelectionModel().getSelectedItems());
+    	if (selectedItems.isEmpty()) return;
+		if (selectedItems.size() > 1) {
+			multipleSelectionAlert.showAndWait();
+			return;
+		}	
+		
+		if (moduleA == null || cafModule == null || 
+				moduleA.getModule() == null || cafModule.getModule() == null || 
+				(moduleA.getModule().getGraph() == null || moduleA.getModule().getGraph().isEmpty()) || 
+				(cafModule.getModule().getGraph() == null || cafModule.getModule().getGraph().isEmpty())) {
+			graphNotFoundAlert.showAndWait();
+			return;
+		}
+		
+		if (!moduleA.getModule().getGraph().containsSubprogram(selectedItems.get(0))) {
+			illegalStateAlert.showAndWait();
+			return;
+		}
+		
+		Pair<String, String> key = new Pair<>(moduleA.getCheckSum(), selectedItems.get(0));
+		if (!cloneGroups.containsKey(key)) {
+			illegalStateAlert.showAndWait();
+			return;
+		}
+		
+		List<Pair<String, String>> value = new ArrayList<>(cloneGroups.get(key));
+		value.add(0, key);
+		List<SubProgram> subprograms = new ArrayList<>();
+		for (Pair<String, String> pair : value) {
+			Optional<SubProgram> subprogram = null;
+			if (moduleA.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleA, pair.getValue());
+			} else if (moduleB.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleB, pair.getValue());
+			} else if (moduleC.getCheckSum().equals(pair.getKey())) {
+				subprogram = findSubprogram(moduleC, pair.getValue());				
+			} else  {
+				throw new IllegalStateException();
+			}
+			if (subprogram.isEmpty()) {
+				throw new IllegalStateException();
+			}
+			subprograms.add(subprogram.get());
+		}
+		FXMLLoader loader = new FXMLLoader(getClass().getResource(Resource.CLONECLASS_FXML.path()), Main.getResources());
+		CloneClassController controller = new CloneClassController(value, subprograms);
+		
+		loader.setController(controller);
+		Pane root = (Pane) loader.load();
+		Scene scene = new Scene(root);
+		scene.getStylesheets().add(getClass().getResource(Resource.CSS.path()).toExternalForm());
+		scene.getStylesheets().add(getClass().getResource(Resource.CODE_CSS.path()).toExternalForm());
+		
+		Stage stage = new Stage();
+		stage.setScene(scene);
+		stage.setTitle(Main.getResources().getString("cc_title"));
+		if (SystemUtils.IS_OS_LINUX) {
+			stage.initModality(Modality.NONE);
+		} else {
+			stage.initModality(Modality.APPLICATION_MODAL);
+		}
+		stage.setOnCloseRequest(e -> controller.deinit());
+		stage.show();
+    }
+	
+	private Optional<SubProgram> findSubprogram(ModuleContainer module, String subName) {
+		return module.getModule().getGraph().subprograms()
+				.stream()
+				.filter(s -> s.name().equalsIgnoreCase(subName))
+				.findFirst();
+	}
+
 }

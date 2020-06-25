@@ -191,7 +191,7 @@
 		<dependency>
     		<groupId>org.fxmisc.richtext</groupId>
     		<artifactId>richtextfx</artifactId>
-    		<version>0.9.1</version>
+    		<version>0.10.5</version>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->

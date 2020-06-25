@@ -75,6 +75,7 @@
                                                       <MenuItem mnemonicParsing="false" onAction="#findClonesSystemB" text="%find_clonesb_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#findClonesSystemC" text="%find_clonesc_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#refactorItemSystemA" text="%refactor_item" />
+                                                      <MenuItem mnemonicParsing="false" onAction="#refactorCloneClass" text="%refactor_cc_item" />
                                                       <MenuItem mnemonicParsing="false" onAction="#removeItemsSystemA" text="%remove_item" />
                                                   </items>
                                                 </ContextMenu>

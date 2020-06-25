@@ -28,12 +28,14 @@ public class Main extends Application {
 
 	public enum Resource {
 		CSS("/com/woodplc/cora/gui/css/application.css"),
+		CODE_CSS("/com/woodplc/cora/gui/css/code.css"),
 		TEXT("com.woodplc.cora.gui.fxml.CoraResources"),
 		MAIN_FXML("/com/woodplc/cora/gui/fxml/CoRAMain.fxml"),
 		ADJACENT_FXML("/com/woodplc/cora/gui/fxml/AdjacentSubprograms.fxml"),
 		VAR_FXML("/com/woodplc/cora/gui/fxml/VariableControlledSubprograms.fxml"),
 		CLONES_FXML("/com/woodplc/cora/gui/fxml/Clones.fxml"),
 		CODEVIEW_FXML("/com/woodplc/cora/gui/fxml/CodeViewer.fxml"),
+		CLONECLASS_FXML("/com/woodplc/cora/gui/fxml/CloneClass.fxml"),
 		FORTRAN_KEYWORDS("fortran_keywords.txt");
 		
 		private final String path;
