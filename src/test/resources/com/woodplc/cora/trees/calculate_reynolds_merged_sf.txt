@@ -1,0 +1,113 @@
+
+! ********************************************************************************
+! ********************************************************************************
+! ********************************************************************************<<INS from 0: 
+ 
+
+ 
+ 
+ 
+ 
+ 
+>><<INS from 2: pure >>subroutine <<UPD from 2: calculate_reynolds_coeffs to calcof>>(<<INS from 0: cdn , cdt ,>> can, cmt, <<INS from 0: cmn , cdnn , cdtt ,>> cann,  &
+	& cmtt, <<INS from 0: cmnn ,>> reno, nore, vrelp, dragd, maxre, viskin)<<UPD from 1: 
+ to 
+
+>>  
+  <<INS from 0: 
+>>  implicit none
+  !*--calculate_reynolds_coeffs318
+  !
+  !*** start of declarations rewritten by spag
+  !
+  ! dummy arguments
+  !
+  real(8) :: can
+  <<INS from 0: real ( 8 ) :: cdn 
+ real ( 8 ) :: cdt 
+ real ( 8 ) :: cmn 
+>>  real(8) :: cmt
+  real(8) :: dragd
+  integer, intent(in) :: maxre
+  real(8), intent(in) :: viskin
+  real(8) :: vrelp
+  real(8), dimension(maxre) :: cann
+  <<INS from 0: real ( 8 ) , dimension ( maxre ) :: cdnn 
+ real ( 8 ) , dimension ( maxre ) :: cdtt 
+ real ( 8 ) , dimension ( maxre ) :: cmnn 
+>>  real(8), dimension(maxre) :: cmtt
+  integer, dimension(maxre) :: nore
+  real(8), dimension(maxre) :: reno
+  
+  intent(in) <<INS from 0: cdnn , cdtt ,>>cann, cmtt, <<INS from 0: cmnn ,>> dragd, nore, reno, vrelp
+  intent(out) <<INS from 0: cdn , cdt ,>>can, cmt<<INS from 0: , cmn>>
+  !local variables
+  integer :: i
+  real(8) :: reyfac
+  real(8) :: reyn
+  
+  !
+  !*** end of declarations rewritten by spag
+  !
+ 
+  ! if cm constant ....<<INS from 0: 
+
+ if (>>nore(1) <<UPD from 2: == to .eq.>> 1<<INS from 0: )>><<INS from 1: ) >>then
+    cdn = cdnn(1)<<INS from 0: 
+>>    cdt = cdtt(1)<<INS from 0: 
+>>    can = cann(1)
+    cmt = cmtt(1)
+    cmn = cmnn(1)<<INS from 0: 
+>>  else<<UPD from 2: 
+
+ to 
+>>    ! else if ca = f(re) => calculate re = f(vrelp) ...<<UPD from 2: 
+
+ to 
+>>    <<INS from 1: 
+ 
+ >>reyn = vrelp * dragd / viskin
+    ! & calculate cof. = f(re)<<UPD from 2: 
+
+ to 
+>>    if(<<INS from 1: 
+ 
+ if ( >>reyn <<UPD from 2: <= to .le.>> reno(1))then
+      cdn = cdnn(1)<<INS from 0: 
+>>      cdt = cdtt(1)<<INS from 0: 
+>>      can = cann(1)
+      cmt = cmtt(1)
+      cmn = cmnn(1)<<INS from 0: 
+>>    elseif(reyn <<UPD from 2: >= to .ge.>> reno(nore(1)))then
+      cdn = cdnn(nore(1))<<INS from 0: 
+>>      cdt = cdtt(nore(1))<<INS from 0: 
+>>      can = cann(nore(1))
+      cmt = cmtt(nore(1))
+      cmn = cmnn(nore(1))<<INS from 0: 
+>>    else
+     do <<INS from 1: 50 >>i=2,nore(1)
+      if(reyn <<UPD from 2: < to .lt.>> reno(i))then
+        reyfac = (reyn-reno(i-1)) / (reno(i)-reno(i-1))
+        cdn = cdnn(i-1) + (cdnn(i)-cdnn(i-1)) * reyfac<<INS from 0: 
+>>        cdt = cdtt(i-1) + (cdtt(i)-cdtt(i-1)) * reyfac<<INS from 0: 
+>>        can = cann(i-1) + (cann(i)-cann(i-1)) * reyfac
+        cmt = cmtt(i-1) + (cmtt(i)-cmtt(i-1)) * reyfac
+        cmn = cmnn(i-1) + (cmnn(i)-cmnn(i-1)) * reyfac<<INS from 0: 
+>>        goto 55
+      endif
+     <<INS from 0: end do>><<UPD from 1: 
+ to 
+
+>><<INS from 1: 50 continue 
+ >>55      continue
+    endif<<UPD from 2: 
+
+ to 
+>>  <<INS from 2: 
+ >>endif<<INS from 0: 
+
+>>  <<INS from 2: 
+ 
+ >><<INS from 1: return 
+
+ >>end <<INS from 0: subroutine calculate_reynolds_coeffs>>

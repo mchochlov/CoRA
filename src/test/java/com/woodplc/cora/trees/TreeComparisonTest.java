@@ -124,7 +124,7 @@ class TreeComparisonTest {
 		subs.put(subB, originalSubprogramB);
 		subs.put(subC, originalSubprogramC);
 		
-		CloneMergeAlgorithm cma = MergeAlgorithms.getTokenSequenceMergeAlgorithm(subs);
+		CloneMergeAlgorithm cma = MergeAlgorithms.defaultTokenSequenceMergeAlgorithm(subs);
 		List<String> mergedSubprogram = cma.merge();
 		//mergedSubprogram.forEach(System.out::println);
 		List<String> correctMerged = Files.readAllLines(Paths.get(getClass().getResource(SUB_MERGED).toURI()));

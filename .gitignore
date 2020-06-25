@@ -1,9 +1,7 @@
 .classpath
 .project
-target/
-bin/
+/target/
+/bin/
 .settings/
-index/
-data/
-/last_state.json
-.cora
+/index/
+/data/

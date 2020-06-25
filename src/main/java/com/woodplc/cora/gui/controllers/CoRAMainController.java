@@ -730,30 +730,38 @@ public class CoRAMainController {
 
 	@FXML
     void removeItemsSystemA(ActionEvent event) {
-		removeItems(systemASubprogramList, feature.systemASubprograms(), moduleA.getPath().getFileName().toString());
+		removeItems(systemASubprogramList, feature.systemASubprograms(), moduleA);
     }
 
     @FXML
     void removeItemsSystemB(ActionEvent event) {
-		removeItems(systemBSubprogramList, feature.systemBSubprograms(), moduleB.getPath().getFileName().toString());
+		removeItems(systemBSubprogramList, feature.systemBSubprograms(), moduleB);
     }
 
     @FXML
     void removeItemsSystemC(ActionEvent event) {
-		removeItems(systemCSubprogramList, feature.systemCSubprograms(), moduleC.getPath().getFileName().toString());
+		removeItems(systemCSubprogramList, feature.systemCSubprograms(), moduleC);
     }
     
-    private void removeItems(ListView<String> subprogramList, ObservableList<String> list, String path) {
+    private void removeItems(ListView<String> subprogramList, ObservableList<String> list, ModuleContainer module) {
     	List<String> selectedItems = new ArrayList<>(subprogramList.getSelectionModel().getSelectedItems());
 		if (selectedItems.isEmpty()) {return;}
 		list.removeAll(selectedItems);
-		for (String item : selectedItems) {
-			Set<Pair<String, String>> clones = cloneGroups.removeAll(new Pair<String, String>(moduleA.getCheckSum(), item));	
-			if (!clones.isEmpty()) {
-				logger.info("Removed clones for subprogram \"{}\"", item);
-				for (Pair<String, String> pair : clones) {
-					logger.info("Removed clone subprogram \"{}\" from module with checksum {}", pair.getValue(), pair.getKey());
-				}				
+		if (module.equals(moduleA)) {
+			for (String item : selectedItems) {
+				Set<Pair<String, String>> clones = cloneGroups.removeAll(new Pair<String, String>(moduleA.getCheckSum(), item));	
+				if (!clones.isEmpty()) {
+					logger.info("Removed clones for subprogram \"{}\"", item);
+					for (Pair<String, String> pair : clones) {
+						logger.info("Removed clone subprogram \"{}\" from module with checksum {}", pair.getValue(), pair.getKey());
+					}				
+				}
+			}
+		} else {
+			for (String item : selectedItems) {
+				cloneGroups.entries().removeIf(e -> 
+					e.getValue().getKey().equals(module.getCheckSum()) && e.getValue().getValue().equals(item)
+				);
 			}
 		}
     }
