@@ -1,0 +1,6 @@
+target/lib/*win*
+target/data
+target/*classes
+target/*sources
+target/*reports
+target/maven*

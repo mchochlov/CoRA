@@ -4,14 +4,38 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.annotations.Expose;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 public final class Feature {
-	
+
+	@Expose
 	private final ObservableList<String> systemASubprograms = FXCollections.observableArrayList();
+	@Expose
 	private final ObservableList<String> systemBSubprograms = FXCollections.observableArrayList();
+	@Expose
 	private final ObservableList<String> systemCSubprograms = FXCollections.observableArrayList();
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(systemASubprograms, systemBSubprograms, systemCSubprograms);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			 return true;
+		}
+		if (!(obj instanceof Feature)) {
+			return false;
+		}
+		Feature other = (Feature) obj;
+		return this.systemASubprograms.equals(other.systemASubprograms) &&
+				this.systemBSubprograms.equals(other.systemBSubprograms) &&
+				this.systemCSubprograms.equals(other.systemCSubprograms);
+	}
 	
 	public Feature() {}
 
@@ -43,4 +67,5 @@ public final class Feature {
 	public List<String> readOnlySystemBSubprograms() {return Collections.unmodifiableList(systemBSubprograms);}
 	
 	public List<String> readOnlySystemCSubprograms() {return Collections.unmodifiableList(systemCSubprograms);}
+
 }

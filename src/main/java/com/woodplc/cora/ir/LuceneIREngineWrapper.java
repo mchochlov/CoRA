@@ -37,25 +37,30 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.BytesRef;
 
 import com.woodplc.cora.app.Main.Resource;
+import com.woodplc.cora.data.ProgramEntryNotFoundException;
 
-final class LuceneIREngineWrapper implements IREngine {
+class LuceneIREngineWrapper implements IREngine {
 	
 	private final static String INDEX_ROOT = "index";
 	private final static int MAX_HITS = Integer.MAX_VALUE;
 	private final Path indexPath;
 	private final Analyzer fortranAnalyzer;
 	private final Directory dir;
-	private final IndexWriter writer;
+	protected final IndexWriter writer;
 	private final SearcherManager searchManager;
 	private final QueryParser dataFieldQueryParser;
-	private final boolean readOnly;
+	protected final boolean readOnly;
 	
-	private enum Fields{
+	protected enum Fields{
 		NAME,
 		DATA;
 	}
 
 	public LuceneIREngineWrapper(Path path, boolean readOnly) {
+		this(path, readOnly, OpenMode.CREATE);
+	}
+	
+	public LuceneIREngineWrapper(Path path, boolean readOnly, OpenMode mode) {
 		this.indexPath = Paths.get(Objects.requireNonNull(path).toString(), INDEX_ROOT);
 		this.readOnly = readOnly;
 		
@@ -75,7 +80,7 @@ final class LuceneIREngineWrapper implements IREngine {
 				this.writer = null;
 				this.searchManager = new SearcherManager(dir, null);
 			} else {
-				IndexWriterConfig iwc = new IndexWriterConfig(fortranAnalyzer).setOpenMode(OpenMode.CREATE);
+				IndexWriterConfig iwc = new IndexWriterConfig(fortranAnalyzer).setOpenMode(mode);
 				this.writer = new IndexWriter(dir, iwc);
 				this.searchManager = new SearcherManager(writer, true, true, null);
 			}
@@ -92,6 +97,14 @@ final class LuceneIREngineWrapper implements IREngine {
 			throw new IllegalStateException();
 		}
 		
+		try {
+			writer.addDocument(prepareDocument(subname, textData));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	protected Document prepareDocument(String subname, String textData) {
 		if ((subname == null || subname.isEmpty()) ||
 				textData == null || textData.isEmpty()) {
 			throw new IllegalArgumentException();
@@ -105,12 +118,8 @@ final class LuceneIREngineWrapper implements IREngine {
 		customType.setStoreTermVectors(true);
 		customType.freeze();
 		Field textField = new Field(Fields.DATA.name(), textData, customType);
-		doc.add(textField);
-		try {
-			writer.addDocument(doc);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		doc.add(textField);	
+		return doc;
 	}
 	
 	@Override
@@ -173,7 +182,7 @@ final class LuceneIREngineWrapper implements IREngine {
 	}
 
 	@Override
-	public List<String> getDocumentTermVector(String subname) {
+	public List<String> getDocumentTermVector(String subname) throws ProgramEntryNotFoundException {
 		if (subname == null || subname.isEmpty()) {
 			throw new IllegalArgumentException();
 		}
@@ -186,7 +195,7 @@ final class LuceneIREngineWrapper implements IREngine {
 			ScoreDoc[] hits = searcher.search(query, MAX_HITS).scoreDocs;
 			
 			if (hits.length != 1) {
-				throw new IllegalStateException();
+				throw new ProgramEntryNotFoundException();
 			}
 			
 			Terms terms = searcher.getIndexReader().getTermVector(hits[0].doc, Fields.DATA.name());

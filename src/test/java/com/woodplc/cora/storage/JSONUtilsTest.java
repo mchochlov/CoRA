@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 
 import org.junit.jupiter.api.Test;
 
-import com.woodplc.cora.data.ApplicationState;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.SDGraph;
@@ -47,27 +46,6 @@ class JSONUtilsTest {
 		assertNotNull(restoredGraph);
 		assertTrue(savedGraph != restoredGraph);
 		assertTrue(savedGraph.equals(restoredGraph));
-	}
-	
-	@Test
-	void testStateLoadRestoreIntegrity() throws IOException {
-		ApplicationState emptyState = TestUtils.emptyApplicationState();
-		assertNotNull(emptyState);
-		JSONUtils.stateToJson(emptyState);
-		
-		ApplicationState restoredEmptyState = JSONUtils.stateFromJson();
-		assertNotNull(restoredEmptyState);
-		assertTrue(emptyState != restoredEmptyState);
-		assertTrue(emptyState.equals(restoredEmptyState));
-		
-		ApplicationState nonEmptyState = TestUtils.fullyInitializedApplicationState();
-		assertNotNull(nonEmptyState);
-		JSONUtils.stateToJson(nonEmptyState);
-		
-		ApplicationState restoredNonEmptyState = JSONUtils.stateFromJson();
-		assertNotNull(restoredNonEmptyState);
-		assertTrue(nonEmptyState != restoredNonEmptyState);
-		assertTrue(nonEmptyState.equals(restoredNonEmptyState));
 	}
 	
 	@Test

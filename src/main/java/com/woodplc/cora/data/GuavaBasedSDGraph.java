@@ -3,54 +3,62 @@ package com.woodplc.cora.data;
 import static java.util.stream.Collectors.toSet;
 
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 import com.google.common.graph.GraphBuilder;
 import com.google.common.graph.MutableGraph;
 import com.google.common.graph.Traverser;
 
-final class GuavaBasedSDGraph implements SDGraph {
+public final class GuavaBasedSDGraph implements SDGraph {
 		
-	private final Set<SubProgram> subprograms = new HashSet<>();
-
-	private final MutableGraph<String> subprogramCallGraph = GraphBuilder
-			.directed()
-			.allowsSelfLoops(true)
-			.build();
-	private final SetMultimap<String, String> variableCallees = SetMultimapBuilder
-			.hashKeys()
-			.hashSetValues()
-			.build();
+	private final Table<String, String, ModuleVariable> moduleVariableMap;
+	private final Set<SubProgram> subprograms;
+	private final MutableGraph<String> subprogramCallGraph;
+	private final SetMultimap<String, String> variableCallees;
+	private final Set<String> allModules;
 	
-	private ImmutableSet<String> unreferencedSubprograms = null;
+	private transient ImmutableSet<String> unreferencedSubprograms = null;
+	private transient ImmutableSet<String> externalSubprograms =  null;
 	
-	GuavaBasedSDGraph() {}
+	GuavaBasedSDGraph() {
+		moduleVariableMap = TreeBasedTable.create(String.CASE_INSENSITIVE_ORDER, String.CASE_INSENSITIVE_ORDER);
+		subprograms = new HashSet<>();
+		subprogramCallGraph = GraphBuilder
+				.directed()
+				.allowsSelfLoops(true)
+				.build();
+		variableCallees = SetMultimapBuilder
+				.hashKeys()
+				.hashSetValues()
+				.build();
+		allModules = new HashSet<>();
+	}
 	
-	GuavaBasedSDGraph(Set<SubProgram> subprograms, 
-			Set<CallEdge> edges,
-			Map<String, Collection<String>> variables) {
-		Objects.requireNonNull(subprograms);
-		Objects.requireNonNull(edges);
-		Objects.requireNonNull(variables);
-		
-		this.subprograms.addAll(subprograms);
-		this.subprograms.stream()
-				.map(SubProgram::name)
-				.forEach(subprogramCallGraph::addNode);
-		
-		edges.forEach(edge -> subprogramCallGraph.putEdge(edge.source(), edge.target()));
-		variables.forEach(variableCallees::putAll);
+	public GuavaBasedSDGraph(SDGraph graph) {
+		Objects.requireNonNull(graph);
+		if (!(graph instanceof GuavaBasedSDGraph)) throw new IllegalArgumentException();
+		GuavaBasedSDGraph g = (GuavaBasedSDGraph) graph;
+		moduleVariableMap = TreeBasedTable.create((TreeBasedTable<String, String, ModuleVariable>) g.moduleVariableMap);
+		subprograms = new HashSet<>(g.subprograms);
+		subprogramCallGraph = com.google.common.graph.Graphs.copyOf(g.subprogramCallGraph);
+		variableCallees = SetMultimapBuilder.hashKeys().hashSetValues().build(g.variableCallees);
+		allModules = new HashSet<>(g.allModules);
 	}
 
 	@Override
@@ -138,7 +146,9 @@ final class GuavaBasedSDGraph implements SDGraph {
 			this.subprogramCallGraph.putEdge(x.source(), x.target());
 		});
 		this.subprograms.addAll(g.subprograms);
+		this.moduleVariableMap.putAll(g.moduleVariableMap);
 		this.variableCallees.putAll(g.variableCallees);
+		this.allModules.addAll(g.allModules);
 		g = null;
 	}
 
@@ -155,7 +165,9 @@ final class GuavaBasedSDGraph implements SDGraph {
 	public boolean isEmpty() {
 		return subprograms.isEmpty() 
 				&& subprogramCallGraph.nodes().isEmpty() 
-				&& variableCallees.isEmpty();
+				&& variableCallees.isEmpty()
+				&& moduleVariableMap.isEmpty()
+				&& allModules.isEmpty();
 	}
 
 	@Override
@@ -184,13 +196,15 @@ final class GuavaBasedSDGraph implements SDGraph {
 		GuavaBasedSDGraph g = (GuavaBasedSDGraph) o;
 		
 		return this.subprograms.equals(g.subprograms)
+				&& this.moduleVariableMap.equals(g.moduleVariableMap)
 				&& this.subprogramCallGraph.equals(g.subprogramCallGraph)
-				&& this.variableCallees.equals(g.variableCallees);
+				&& this.variableCallees.equals(g.variableCallees)
+				&& this.allModules.equals(g.allModules);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(this.subprograms, this.subprogramCallGraph, this.variableCallees);
+		return Objects.hash(this.subprograms, this.moduleVariableMap, this.subprogramCallGraph, this.variableCallees, this.allModules);
 	}
 
 	@Override
@@ -201,7 +215,11 @@ final class GuavaBasedSDGraph implements SDGraph {
 					.stream()
 					.filter(s -> s instanceof Program)
 					.findFirst();
-			if (!startNode.isPresent()) throw new ProgramEntryNotFoundException();
+			if (!startNode.isPresent()) {
+				unreferencedSubprograms = ImmutableSet.of();
+				throw new ProgramEntryNotFoundException();
+			}
+
 			Set<String> functions = subprograms.stream()
 					.filter(f -> f instanceof Function)
 					.map(SubProgram::name)
@@ -213,5 +231,103 @@ final class GuavaBasedSDGraph implements SDGraph {
 					.immutableCopy();
 		}
 		return unreferencedSubprograms;
+	}
+
+	@Override
+	public Set<String> getExternalSubprograms() throws ProgramEntryNotFoundException {
+		if (externalSubprograms == null) {
+			Set<String> internalSubprograms = subprograms.stream()
+					.map(s -> s.name())
+					.collect(Collectors.toSet());
+			externalSubprograms = Sets.difference(subprogramCallGraph.nodes(), 
+					internalSubprograms)
+					.immutableCopy();
+		}
+		return externalSubprograms;
+	}
+
+	@Override
+	public void printSubgraph(Set<String> subGraphNodes) {
+		MutableGraph<String> mGraph = com.google.common.graph.Graphs.inducedSubgraph(subprogramCallGraph, subGraphNodes);
+		for (String node : mGraph.nodes()) {
+			if (mGraph.predecessors(node).isEmpty()) {
+				Deque<String> queue = new LinkedList<>();
+				queue.add(node);
+				int level = 0;
+				while (!queue.isEmpty()) {
+					System.out.print(++level + " ");
+					int qLen = queue.size();
+					for (int i = 0; i < qLen; i++) {
+						String n = queue.pollLast();
+						if(!subprogramCallGraph.predecessors(n).equals(mGraph.predecessors(n))) {
+							System.out.print("Public ");
+						}
+						System.out.print(n + " ");
+						for (String s : mGraph.successors(n)) {
+							queue.addFirst(s);
+						}
+					}
+					System.out.println("\n");
+				}
+			}
+		}
+		
+	}
+
+	@Override
+	public Set<String> modules() {
+		Set<String> ts = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+		ts.addAll(allModules);
+		return ts;
+	}
+
+	@Override
+	public void addModuleVariable(String moduleName, String variableName, ModuleVariable moduleVariable) {
+		Objects.requireNonNull(moduleName);
+		Objects.requireNonNull(variableName);
+		
+		if (moduleName.isEmpty() || moduleVariableMap.put(moduleName, variableName, moduleVariable) != null) {
+			throw new IllegalStateException(moduleName + " " + variableName);
+		}
+	}
+
+	@Override
+	public ModuleVariable getModuleVariable(String moduleName, String variableName) {
+		Objects.requireNonNull(moduleName);
+		Objects.requireNonNull(variableName);
+		
+		return moduleVariableMap.get(moduleName, variableName);
+	}
+
+	@Override
+	public Set<String> getAllModuleVariables(String moduleName) {
+		return moduleVariableMap.row(moduleName).keySet();
+	}
+	
+	
+
+	@Override
+	public void addGraphNodes(Set<SubProgram> subprograms) {
+		Objects.requireNonNull(subprograms);
+		for (SubProgram subProgram : subprograms) {
+			subprogramCallGraph.addNode(subProgram.name());
+		}
+		
+	}
+
+	@Override
+	public Map<String, ModuleVariable> getAllVariableModules(String variableName) {
+		return moduleVariableMap.column(variableName);
+	}
+
+	@Override
+	public void addModule(String currentModule) {
+		this.allModules.add(currentModule);
+	}
+
+	@Override
+	public void updateSubprograms(Set<SubProgram> subprograms) {
+		this.subprograms.removeAll(subprograms);
+		this.subprograms.addAll(subprograms);
 	}
 }

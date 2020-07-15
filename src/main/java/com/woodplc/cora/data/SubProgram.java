@@ -50,13 +50,13 @@ public abstract class SubProgram {
 	
 	public static SubProgram ofType(String type, String module, String name, 
 			int startLine, int endLine, Path fname) {
-		if (type.equals("program")) 
+		if (type.equalsIgnoreCase("program")) 
 			return new Program(module,
 				name, startLine, endLine, fname);
-		else if (type.equals("subroutine"))
+		else if (type.equalsIgnoreCase("subroutine"))
 			return new Subroutine(module,
 				name, startLine, endLine, fname);
-		else if (type.equals("function"))
+		else if (type.equalsIgnoreCase("function"))
 			return new Function(module,
 				name, startLine, endLine, fname);
 		else throw new IllegalArgumentException();
@@ -79,14 +79,14 @@ public abstract class SubProgram {
 		SubProgram s = (SubProgram) o;
 		return module.equals(s.module) &&
 				subname.equals(s.subname) &&
-				startLine == s.startLine &&
-				endLine == s.endLine &&
+				//startLine == s.startLine &&
+				//endLine == s.endLine &&
 				path.getFileName().equals(s.path.getFileName());
 	}
 	
 	@Override
 	public int hashCode() {
-		return Objects.hash(module, subname, startLine, endLine, path.getFileName());
+		return Objects.hash(module, subname, path.getFileName());
 	}
 
 	@Override

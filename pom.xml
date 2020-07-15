@@ -3,27 +3,29 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.woodplc</groupId>
 	<artifactId>cora</artifactId>
-	<version>0.1.7-SNAPSHOT</version>
+	<version>0.1.11-SNAPSHOT</version>
 	<name>Code Reunification Application</name>
 
 	<properties>
 		<lucene.version>7.5.0</lucene.version>
 		<antlr.version>4.7.1</antlr.version>
 		<jupiter.version>5.3.1</jupiter.version>
-		<openjfx.version>11.0.1</openjfx.version>
+		<openjfx.version>14</openjfx.version>
+		<gumtree.version>3.0.0-beta1-SNAPSHOT</gumtree.version>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	
 	<repositories>
 		<repository>
 			<id>central-repo</id>
 			<name>Central Repository</name>
-			<url>http://repo.maven.apache.org/maven2</url>
+			<url>https://repo.maven.apache.org/maven2</url>
 		</repository>
 	</repositories>
 	<pluginRepositories>
 		<pluginRepository>
 			<id>central</id>
-			<url>http://repo.maven.apache.org/maven2</url>
+			<url>https://repo.maven.apache.org/maven2</url>
 		</pluginRepository>
 	</pluginRepositories>
 
@@ -80,6 +82,7 @@
         		</executions>
         		<configuration>
         			<sourceDirectory>src/main/resources</sourceDirectory>
+        			<libDirectory>src/main/resources/com/woodplc/cora/grammar</libDirectory>
         		</configuration>
         	</plugin>
         	<plugin>
@@ -133,6 +136,14 @@
 			<version>${jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<dependency>
+		    <groupId>org.testfx</groupId>
+    		<artifactId>testfx-junit5</artifactId>
+    		<version>4.0.16-alpha</version>
+    		<scope>test</scope>
+		</dependency>
+
 		<dependency>
       		<groupId>org.antlr</groupId>
       		<artifactId>antlr4-runtime</artifactId>
@@ -180,7 +191,14 @@
 		<dependency>
     		<groupId>org.fxmisc.richtext</groupId>
     		<artifactId>richtextfx</artifactId>
-    		<version>0.9.1</version>
+    		<version>0.10.5</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
+		<dependency>
+    		<groupId>org.apache.commons</groupId>
+    		<artifactId>commons-lang3</artifactId>
+    		<version>3.9</version>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/org.openjfx/javafx-controls -->
@@ -196,5 +214,84 @@
 		    <version>${openjfx.version}</version>
 		</dependency>
 		
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-controls</artifactId>
+		    <version>${openjfx.version}</version>
+		    <classifier>linux</classifier>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.openjfx</groupId>
+		    <artifactId>javafx-fxml</artifactId>
+		    <version>${openjfx.version}</version>
+		    <classifier>linux</classifier>
+		</dependency>
+		
+		<dependency>
+        	<groupId>org.openjfx</groupId>
+        	<artifactId>javafx-graphics </artifactId>
+        	<version>${openjfx.version}</version>
+        	<classifier>linux</classifier>
+        </dependency>
+        		
+        <dependency>
+        	<groupId>org.openjfx</groupId>
+        	<artifactId>javafx-base </artifactId>
+        	<version>${openjfx.version}</version>
+        	<classifier>linux</classifier>
+    	</dependency>
+    	
+    	<dependency>
+    		<groupId>org.eclipse.jgit</groupId>
+    		<artifactId>org.eclipse.jgit</artifactId>
+    		<version>5.2.1.201812262042-r</version>
+    		<scope>test</scope>
+		</dependency>
+    	
+    	<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+		<dependency>
+    		<groupId>org.slf4j</groupId>
+    		<artifactId>slf4j-api</artifactId>
+    		<version>2.0.0-alpha1</version>
+		</dependency>
+		
+		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
+		<dependency>
+    		<groupId>org.slf4j</groupId>
+    		<artifactId>slf4j-log4j12</artifactId>
+		    <version>2.0.0-alpha1</version>
+    		<!-- <scope>test</scope> -->
+		</dependency>
+		
+		<dependency>
+    		<groupId>commons-io</groupId>
+    		<artifactId>commons-io</artifactId>
+    		<version>2.6</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>core</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>client</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.jdt</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>com.github.gumtreediff</groupId>
+			<artifactId>gen.antlr4</artifactId>
+			<version>${gumtree.version}</version>
+		</dependency>
 	</dependencies>
 </project>

@@ -11,27 +11,38 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import com.woodplc.cora.data.ApplicationState;
+import com.google.common.collect.MultimapBuilder.SetMultimapBuilder;
+import com.google.common.collect.SetMultimap;
 import com.woodplc.cora.data.Feature;
 import com.woodplc.cora.data.FeatureView;
 import com.woodplc.cora.data.Graphs;
 import com.woodplc.cora.data.ModuleContainer;
 import com.woodplc.cora.data.SDGraph;
 import com.woodplc.cora.data.SubProgram;
+import com.woodplc.cora.gui.controllers.CoRAMainController;
 import com.woodplc.cora.gui.model.SearchEntryView;
 import com.woodplc.cora.parser.Parser;
 import com.woodplc.cora.parser.Parsers;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.util.Pair;
 
 public final class TestUtils {
 
 	public static enum SoftwareSystem {
+		TEST_MOD_FL(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\fl")),
+		TEST_MOD_DR(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\dr")),
+		TEST_MOD_PL(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\modules_test\\pl")),
 		TEST(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\ParserTest\\Lero\\all")),
 		FLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\FlexcomAnalysis\\Flex3")),
 		DPRFLEX3(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\DeepRiserAnalysis\\Dprflex3")),
-		MAM(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\PipeLayAnalysis\\mam"));
+		MAM(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\PipeLayAnalysis\\mam")), 
+		CAF(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\CAF\\Preprocessing")),
+		FLEXCOM(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\FlexcomAnalysis")),
+		DEEPRISER(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\DeepRiserAnalysis")),
+		PIPELAY(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\PipeLayAnalysis")), 
+		CAF_ROOT(Paths.get("C:\\Users\\muslim.chochlov\\Projects\\Source\\CAF"));
 		
 		private final Path path;
 		
@@ -56,13 +67,7 @@ public final class TestUtils {
 	    }
 	}
 
-	public static ApplicationState emptyApplicationState() {
-		return new ApplicationState(null, null, FXCollections.observableArrayList(), 
-				ModuleContainer.empty(), ModuleContainer.empty(), ModuleContainer.empty(), 
-				new Feature());
-	}
-
-	public static ApplicationState fullyInitializedApplicationState() {
+	public static CoRAMainController fullyInitializedMainController() {
 		File lastKnownDir = new File(SoftwareSystem.TEST.path.toString());
 		String searchQuery = "searchQuery";
 		ObservableList<SearchEntryView> searchResults = FXCollections.observableArrayList(
@@ -73,12 +78,18 @@ public final class TestUtils {
 		ModuleContainer mc1 = ModuleContainer.fromValues(SoftwareSystem.FLEX3.path.toString(), "checksum_1");
 		ModuleContainer mc2 = ModuleContainer.fromValues(SoftwareSystem.DPRFLEX3.path.toString(), "checksum_2");
 		ModuleContainer mc3 = ModuleContainer.fromValues(SoftwareSystem.MAM.path.toString(), "checksum_3");
+		ModuleContainer caf = ModuleContainer.fromValues(SoftwareSystem.CAF.path.toString(), "checksum_4");
 		Feature feature = new Feature();
 		feature.systemASubprograms().addAll("subprogram_a", "subprogram_b", "subprogram_c");
 		feature.systemBSubprograms().addAll("subprogram_d", "subprogram_e");
 		feature.systemCSubprograms().addAll("subprogram_f");
-		return new ApplicationState(lastKnownDir, searchQuery, searchResults, 
-				mc1, mc2, mc3, feature);
+		SetMultimap<Pair<String, String>, Pair<String, String>> cloneGroups = SetMultimapBuilder.hashKeys().hashSetValues().build();
+		Pair<String, String> pair = new Pair<>("aaa", "sub1");
+		cloneGroups.put(pair, new Pair<String, String>("bbb", "sub2"));
+		cloneGroups.put(pair, new Pair<String, String>("ccc", "sub3"));
+		
+		return CoRAMainController.fromValues(lastKnownDir, searchQuery, searchResults, 
+				mc1, mc2, mc3, caf, feature, cloneGroups);
 	}
 
 	public static FeatureView emptyFeatureView() {

@@ -9,6 +9,8 @@ public interface SDGraph {
 	void addVariablesAndCallees(Set<String> variables, Set<String> callees);
 
 	void addSubprogramAndCallees(SubProgram subprogram, Set<String> callees);
+	
+	void addGraphNodes(Set<SubProgram> subprograms);
 
 	boolean containsSubprogram(String subName);
 
@@ -39,4 +41,22 @@ public interface SDGraph {
 	Map<String, Set<String>> getVariablesAndCallees(String subname);
 
 	Set<String> getUnreferencedSubprograms() throws ProgramEntryNotFoundException;
+	
+	Set<String> getExternalSubprograms() throws ProgramEntryNotFoundException;
+	
+	void printSubgraph(Set<String> subGraphNodes);
+
+	Set<String> modules();
+
+	ModuleVariable getModuleVariable(String moduleName, String variableName);
+
+	Set<String> getAllModuleVariables(String moduleName);
+	
+	Map<String, ModuleVariable> getAllVariableModules(String variableName);
+
+	void addModuleVariable(String moduleName, String variableName, ModuleVariable moduleVariable);
+
+	void addModule(String currentModule);
+
+	void updateSubprograms(Set<SubProgram> subprograms);
 }
